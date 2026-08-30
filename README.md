@@ -19,7 +19,7 @@ Underneath both sits a policy core — `mandate.py`, `gating.py`,
 explicit confirmation, under a hard order-value cap, with every step
 (allowed or blocked) written to an auditable trail.
 
-📐 **[Design doc](https://claude.ai/code/artifact/0ef2d241-b1d0-4d79-9003-8593d3f187de)** — full system architecture (HLD/LLD), sequence diagrams, security model, known limitations, and business impact.
+📐 **[Design doc](DESIGN.md)** — full system architecture (HLD/LLD), sequence diagrams, security model, known limitations, and business impact.
 
 ## Screenshots
 
