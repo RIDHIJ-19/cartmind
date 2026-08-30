@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{% block title %}CartMind{% endblock %}</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <a href="/search" class="brand">Cart<span class="accent">Mind</span></a>
+  <form action="/search" method="get" class="search-form">
+    <input type="text" name="q" placeholder="Search CartMind" aria-label="Search products" value="{{ request.args.get('q', '') }}">
+    <button type="submit" aria-label="Search">&#128269;</button>
+  </form>
+  <nav class="nav-links">
+    <a href="/cart" class="cart-link">🛒 Cart<span class="cart-badge">{{ cart_count }}</span></a>
+    <a href="/owner" class="nav-link"><small>Store admin</small>Owner console</a>
+  </nav>
+</header>
+<div class="subnav">
+  <a href="/search">All</a><a href="/search?category=fashion">Fashion</a><a href="/search?category=sports">Sports</a>
+</div>
+<main class="shell">
+{% block content %}{% endblock %}
+</main>
+
+<div id="agent-widget">
+  <button id="agent-toggle" aria-label="Open shopping assistant">💬 Ask CartMind</button>
+  <div id="agent-panel" class="hidden">
+    <div id="agent-panel-head">
+      <span>CartMind Assistant</span>
+      <div class="agent-panel-actions">
+        <button id="agent-new-chat" aria-label="New chat" title="New chat">🔄</button>
+        <button id="agent-close" aria-label="Close">✕</button>
+      </div>
+    </div>
+    <div id="agent-log"></div>
+    <form id="agent-form">
+      <input id="agent-input" type="text" placeholder="e.g. I want a black dress" autocomplete="off">
+      <button type="button" id="agent-mic" aria-label="Record voice message" title="Record voice message">🎤</button>
+      <button type="submit">Send</button>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  const KEY = 'cartmind_agent_state';
+  const toggle = document.getElementById('agent-toggle');
+  const panel = document.getElementById('agent-panel');
+  const closeBtn = document.getElementById('agent-close');
+  const newChatBtn = document.getElementById('agent-new-chat');
+  const log = document.getElementById('agent-log');
+  const form = document.getElementById('agent-form');
+  const input = document.getElementById('agent-input');
+  const micBtn = document.getElementById('agent-mic');
+
+  function loadState() {
+    try { return JSON.parse(sessionStorage.getItem(KEY)) || { open: false, history: [], log: [] }; }
+    catch (e) { return { open: false, history: [], log: [] }; }
+  }
+  function saveState(state) { sessionStorage.setItem(KEY, JSON.stringify(state)); }
+
+  let state = loadState();
+
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // Minimal markdown: **bold**, "- " bullet lists, and line breaks.
+  function renderMarkdown(text) {
+    const lines = escapeHtml(text).split('\n');
+    let html = '';
+    let inList = false;
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      const isBullet = /^[-*]\s+/.test(line);
+      if (isBullet) {
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += `<li>${line.replace(/^[-*]\s+/, '')}</li>`;
+        continue;
+      }
+      if (inList) { html += '</ul>'; inList = false; }
+      if (line) html += `<p>${line}</p>`;
+    }
+    if (inList) html += '</ul>';
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    return html.replace(/\b(order_[A-Za-z0-9]+|pay_[A-Za-z0-9]+)\b/g, '<code class="id-chip">$1</code>');
+  }
+
+  function renderLog() {
+    log.innerHTML = state.log.map(m => {
+      const body = m.role === 'assistant' ? renderMarkdown(m.text) : escapeHtml(m.text);
+      return `<div class="agent-msg ${m.role}">${body}</div>`;
+    }).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function showToast(text) {
+    const el = document.createElement('div');
+    el.className = 'cm-toast';
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.classList.add('show'), 10);
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 4000);
+  }
+
+  function setOpen(open) {
+    state.open = open;
+    panel.classList.toggle('hidden', !open);
+    saveState(state);
+  }
+
+  toggle.addEventListener('click', () => setOpen(!state.open));
+  closeBtn.addEventListener('click', () => setOpen(false));
+  newChatBtn.addEventListener('click', () => {
+    state.history = [];
+    state.log = [];
+    saveState(state);
+    renderLog();
+    input.focus();
+  });
+
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let isRecording = false;
+
+  async function startRecording() {
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    } catch (err) {
+      input.placeholder = 'Microphone access denied or unavailable.';
+      return;
+    }
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach((t) => t.stop());
+      const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+      const originalPlaceholder = input.placeholder;
+      input.placeholder = 'Transcribing...';
+      input.disabled = true;
+      try {
+        const formData = new FormData();
+        formData.append('audio', blob, 'recording.webm');
+        const r = await fetch('/agent/transcribe', { method: 'POST', body: formData });
+        const d = await r.json();
+        input.value = d.text || '';
+        input.placeholder = d.error ? d.error : originalPlaceholder;
+      } catch (err) {
+        input.placeholder = 'Could not transcribe. Try again.';
+      } finally {
+        input.disabled = false;
+        input.focus();
+      }
+    };
+    mediaRecorder.start();
+    isRecording = true;
+    micBtn.classList.add('recording');
+    micBtn.title = 'Stop recording';
+  }
+
+  function stopRecording() {
+    if (mediaRecorder && isRecording) mediaRecorder.stop();
+    isRecording = false;
+    micBtn.classList.remove('recording');
+    micBtn.title = 'Record voice message';
+  }
+
+  micBtn.addEventListener('click', () => {
+    if (isRecording) stopRecording();
+    else startRecording();
+  });
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+    state.log.push({ role: 'user', text });
+    renderLog();
+    saveState(state);
+
+    const thinking = { role: 'assistant', text: 'Thinking…' };
+    state.log.push(thinking);
+    renderLog();
+
+    try {
+      const r = await fetch('/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: state.history }),
+      });
+      const d = await r.json();
+      thinking.text = d.reply || (d.error || 'Sorry, something went wrong.');
+      if (d.history) state.history = d.history;
+      if (typeof d.cart_count === 'number') {
+        document.querySelectorAll('.cart-badge').forEach(b => b.textContent = d.cart_count);
+      }
+      renderLog();
+      saveState(state);
+      if (d.payment_status === 'captured') {
+        showToast('✅ Payment captured! Your cart has been cleared.');
+      }
+      if (d.navigate) {
+        setTimeout(() => { window.location.href = d.navigate; }, d.payment_status === 'captured' ? 1800 : 600);
+      }
+    } catch (err) {
+      thinking.text = 'Could not reach the assistant.';
+      renderLog();
+    }
+  });
+
+  setOpen(state.open);
+  renderLog();
+})();
+</script>
+</body>
+</html>

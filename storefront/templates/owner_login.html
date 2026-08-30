@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Owner console — CartMind</title>
+<style>
+:root{--nav:#131921;--accent:#ff8a3d;--wash:#f6f7fb;--line:#e5e7eb;--ink:#1a1d29;--muted:#6b7280;--red:#e53e3e}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--nav);min-height:100vh;display:flex;align-items:center;justify-content:center}
+.card{background:#fff;border-radius:14px;padding:36px 32px;width:340px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.brand{font-size:1.3rem;font-weight:800;color:var(--nav);margin-bottom:4px}
+.brand span{color:var(--accent)}
+h1{font-size:1.05rem;font-weight:700;color:var(--ink);margin:18px 0 4px}
+p.sub{color:var(--muted);font-size:.82rem;margin:0 0 20px}
+.error{background:#fdeaea;color:var(--red);padding:10px 12px;border-radius:8px;font-size:.82rem;margin-bottom:14px}
+label{display:block;font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:6px}
+input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:.95rem;margin-bottom:16px}
+input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+button{width:100%;background:var(--accent);color:#fff;border:0;padding:12px;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer}
+button:hover{background:#f3711f}
+a.back{display:block;text-align:center;margin-top:16px;font-size:.78rem;color:var(--muted);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">Cart<span>Mind</span></div>
+  <h1>Merchant sign-in</h1>
+  <p class="sub">Authenticated payment and audit visibility.</p>
+  {% if error %}<div class="error">{{ error }}</div>{% endif %}
+  <form method="post">
+    <label>Owner password</label>
+    <input type="password" name="password" required autofocus>
+    <button type="submit">View owner console</button>
+  </form>
+  <a class="back" href="/search">&larr; Back to storefront</a>
+</div>
+</body>
+</html>

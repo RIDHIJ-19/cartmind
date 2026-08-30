@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Checkout — CartMind{% endblock %}
+{% block content %}
+{% if blocked_reason %}
+<h1>Checkout</h1>
+<div class="blocked" data-checkout-blocked="true">
+  <strong>Payment blocked.</strong>
+  <p>{{ blocked_reason }}</p>
+</div>
+{% else %}
+<div class="checkout-layout">
+  <div class="checkout-panel">
+    <h1>Review your order</h1>
+    <div id="checkout-summary" data-order-id="{{ order.id if order else '' }}" data-order-amount="{{ order.amount if order else 0 }}">
+      {% for item in items %}
+      <div class="cart-row"><span>{{ item.name }} × {{ item.quantity }}</span><strong>₹{{ "{:,}".format(item.price_inr * item.quantity) }}</strong></div>
+      {% endfor %}
+      <div class="cart-total">Order total: ₹{{ "{:,}".format(total) }}</div>
+    </div>
+    <div class="trust-badges"><span>🔒 Secure TEST MODE checkout</span><span>✓ Gated &amp; audited</span><span>✓ No real charge</span></div>
+  </div>
+  <div class="summary-panel">
+    <div class="summary-total">Order total: ₹{{ "{:,}".format(total) }}</div>
+    <button id="pay-button" data-action="open-razorpay">Pay with Razorpay (TEST MODE)</button>
+    <div id="checkout-status" class="status"></div>
+  </div>
+</div>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+const order = {{ order|tojson if order else "null" }};
+const keyId = "{{ key_id }}";
+document.getElementById('pay-button').addEventListener('click', () => {
+  if (!order) return;
+  const statusEl = document.getElementById('checkout-status');
+  const reportFailure = async (reason) => {
+    await fetch('/payment-failed', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({order_id: order.id, reason})});
+    statusEl.textContent = 'Payment failed: ' + reason;
+    statusEl.dataset.status = 'failed';
+  };
+  const rzp = new Razorpay({
+    key: keyId,
+    amount: order.amount,
+    currency: 'INR',
+    name: 'CartMind Storefront',
+    order_id: order.id,
+    handler: async (response) => {
+      const r = await fetch('/verify-payment', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(response)});
+      const d = await r.json();
+      if (!r.ok || !d.success) { await reportFailure(d.error || 'Verification failed.'); return; }
+      statusEl.textContent = 'Payment captured and verified.';
+      statusEl.dataset.status = 'captured';
+    },
+    modal: { ondismiss: () => reportFailure('Checkout closed before completing payment.') },
+  });
+  rzp.on('payment.failed', (resp) => reportFailure((resp.error && resp.error.description) || 'Card declined.'));
+  rzp.open();
+});
+</script>
+{% endif %}
+{% endblock %}

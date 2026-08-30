@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: cartmind-storefront
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: starter
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: STOREFRONT_SECRET
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: OWNER_PASSWORD
+        sync: false
+      - key: CARTMIND_FORCE_HEADLESS
+        value: "1"
+      - key: CATALOG_SOURCE
+        value: local

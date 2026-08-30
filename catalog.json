@@ -1,0 +1,282 @@
+[
+  {
+    "sku": "DRESS-101",
+    "name": "Velvet Midi Dress",
+    "category": "fashion",
+    "brand": "Rose & Co.",
+    "price_inr": 1499,
+    "description": "Elegant midi dress with soft drape and flattering fit.",
+    "color": "red",
+    "rating": 4.8,
+    "image": "/static/images/redvelvetminidress.jpg",
+    "tags": [
+      "dress",
+      "red",
+      "party",
+      "women",
+      "fashion"
+    ],
+    "stock": 9
+  },
+  {
+    "sku": "DRESS-106",
+    "name": "Noir Wrap Dress",
+    "category": "fashion",
+    "brand": "Mila Mode",
+    "price_inr": 1599,
+    "description": "A sleek black wrap dress with a tailored waist, easy to dress up or down.",
+    "color": "black",
+    "rating": 4.7,
+    "image": "/static/images/noir_blackdress.webp",
+    "tags": [
+      "dress",
+      "black",
+      "wrap",
+      "women",
+      "office"
+    ],
+    "stock": 10
+  },
+  {
+    "sku": "DRESS-108",
+    "name": "Sapphire Midi Dress",
+    "category": "fashion",
+    "brand": "Rose & Co.",
+    "price_inr": 1699,
+    "description": "A deep blue midi dress with a flattering A-line cut.",
+    "color": "blue",
+    "rating": 4.5,
+    "image": "/static/images/bluedress.jpg",
+    "tags": [
+      "dress",
+      "blue",
+      "midi",
+      "women",
+      "office"
+    ],
+    "stock": 9
+  },
+  {
+    "sku": "DRESS-109",
+    "name": "Ivory Garden Dress",
+    "category": "fashion",
+    "brand": "Bloom & Thread",
+    "price_inr": 1799,
+    "description": "Light ivory dress with delicate floral embroidery for daytime events.",
+    "color": "white",
+    "rating": 4.8,
+    "image": "/static/images/whitedress.webp",
+    "tags": [
+      "dress",
+      "white",
+      "floral",
+      "women",
+      "summer"
+    ],
+    "stock": 6
+  },
+  {
+    "sku": "DRESS-110",
+    "name": "Emerald Wrap Dress",
+    "category": "fashion",
+    "brand": "Mila Mode",
+    "price_inr": 1799,
+    "description": "A rich emerald green wrap dress with a soft knit finish.",
+    "color": "green",
+    "rating": 4.6,
+    "image": "/static/images/greendress.jpeg",
+    "tags": [
+      "dress",
+      "green",
+      "wrap",
+      "women",
+      "event"
+    ],
+    "stock": 8
+  },
+  {
+    "sku": "SHOE-201",
+    "name": "Aster Heels",
+    "category": "fashion",
+    "brand": "Luna Step",
+    "price_inr": 1299,
+    "description": "Sleek heeled sandal with cushioned sole and metallic detail.",
+    "color": "black",
+    "rating": 4.5,
+    "image": "/static/images/blackheels.jpeg",
+    "tags": [
+      "heels",
+      "women",
+      "shoe",
+      "party"
+    ],
+    "stock": 10
+  },
+  {
+    "sku": "RUN-001",
+    "name": "Volt Run 7",
+    "category": "sports",
+    "brand": "StrideLabs",
+    "price_inr": 999,
+    "description": "Lightweight training shoe with responsive FoamFlex sole.",
+    "color": "blue",
+    "rating": 4.5,
+    "image": "/static/images/blueshoes.jpeg",
+    "tags": [
+      "running",
+      "daily",
+      "fitness",
+      "shoe"
+    ],
+    "stock": 12
+  },
+  {
+    "sku": "RUN-002",
+    "name": "Aero Sprint Pro",
+    "category": "sports",
+    "brand": "SprintCore",
+    "price_inr": 1499,
+    "description": "Performance runner with breathable knit upper and energy return.",
+    "color": "red",
+    "rating": 4.5,
+    "image": "/static/images/redshoes.jpeg",
+    "tags": [
+      "running",
+      "speed",
+      "performance",
+      "shoe"
+    ],
+    "stock": 7
+  },
+  {
+    "sku": "SHOE-210",
+    "name": "Classic Canvas Sneaker",
+    "category": "fashion",
+    "brand": "Urban Walk",
+    "price_inr": 799,
+    "description": "Everyday white canvas sneaker with a cushioned footbed.",
+    "color": "white",
+    "rating": 4.4,
+    "image": "/static/images/whiteshoes.jpeg",
+    "tags": [
+      "sneaker",
+      "casual",
+      "shoe",
+      "unisex"
+    ],
+    "stock": 15
+  },
+  {
+    "sku": "SHIRT-301",
+    "name": "Oxford Cotton Shirt",
+    "category": "fashion",
+    "brand": "Harrow & Finch",
+    "price_inr": 699,
+    "description": "Crisp white oxford shirt with a tailored fit, perfect for office wear.",
+    "color": "white",
+    "rating": 4.6,
+    "image": "/static/images/whiteshirt.jpeg",
+    "tags": [
+      "shirt",
+      "white",
+      "office",
+      "men",
+      "cotton"
+    ],
+    "stock": 14
+  },
+  {
+    "sku": "SHIRT-302",
+    "name": "Sky Blue Linen Shirt",
+    "category": "fashion",
+    "brand": "Coastal Co.",
+    "price_inr": 799,
+    "description": "Breathable linen shirt in sky blue, ideal for warm days.",
+    "color": "blue",
+    "rating": 4.5,
+    "image": "/static/images/blueshirt.jpeg",
+    "tags": [
+      "shirt",
+      "blue",
+      "linen",
+      "men",
+      "casual"
+    ],
+    "stock": 11
+  },
+  {
+    "sku": "SHIRT-303",
+    "name": "Charcoal Flannel Shirt",
+    "category": "fashion",
+    "brand": "Northfield",
+    "price_inr": 899,
+    "description": "Soft brushed flannel shirt in charcoal, built for cooler weather.",
+    "color": "black",
+    "rating": 4.7,
+    "image": "/static/images/blackshirt.jpeg",
+    "tags": [
+      "shirt",
+      "black",
+      "flannel",
+      "men",
+      "winter"
+    ],
+    "stock": 9
+  },
+  {
+    "sku": "SHIRT-304",
+    "name": "Olive Utility Shirt",
+    "category": "fashion",
+    "brand": "Harrow & Finch",
+    "price_inr": 749,
+    "description": "Rugged olive green utility shirt with chest pockets.",
+    "color": "green",
+    "rating": 4.4,
+    "image": "/static/images/greenshirt.jpeg",
+    "tags": [
+      "shirt",
+      "green",
+      "utility",
+      "men",
+      "casual"
+    ],
+    "stock": 10
+  },
+  {
+    "sku": "SHIRT-305",
+    "name": "Crimson Check Shirt",
+    "category": "fashion",
+    "brand": "Northfield",
+    "price_inr": 699,
+    "description": "Classic red-and-black check shirt with a relaxed fit.",
+    "color": "red",
+    "rating": 4.5,
+    "image": "/static/images/redshirt.jpeg",
+    "tags": [
+      "shirt",
+      "red",
+      "check",
+      "men",
+      "casual"
+    ],
+    "stock": 13
+  },
+  {
+    "sku": "SHIRT-306",
+    "name": "Pastel Pink Casual Shirt",
+    "category": "fashion",
+    "brand": "Coastal Co.",
+    "price_inr": 649,
+    "description": "Soft pastel pink shirt with a relaxed, breathable fit.",
+    "color": "pink",
+    "rating": 4.3,
+    "image": "/static/images/pinkshirt.jpg",
+    "tags": [
+      "shirt",
+      "pink",
+      "casual",
+      "unisex"
+    ],
+    "stock": 12
+  }
+]

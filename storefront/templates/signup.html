@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Sign up — CartMind Storefront{% endblock %}
+{% block content %}
+<div class="auth-panel">
+  <h1>Create an account</h1>
+  {% if error %}<div class="blocked">{{ error }}</div>{% endif %}
+  <form method="post" class="auth-form">
+    <label>Name<input type="text" name="name" autofocus></label>
+    <label>Email<input type="email" name="email" required></label>
+    <label>Password<input type="password" name="password" required minlength="6"></label>
+    <button type="submit">Sign up</button>
+  </form>
+  <p class="meta">Already have an account? <a href="/login">Log in</a></p>
+</div>
+{% endblock %}

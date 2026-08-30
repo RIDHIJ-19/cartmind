@@ -1,0 +1,10 @@
+anthropic>=0.51.0
+groq>=0.29.0
+python-dotenv>=1.0.1
+psycopg[binary]>=3.2.3
+razorpay>=1.4.2
+flask>=3.0.0
+playwright>=1.62.0
+sounddevice>=0.4.6
+numpy>=1.26.0
+gunicorn>=22.0.0

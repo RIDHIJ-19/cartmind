@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Page not found' if not_found else 'Something went wrong' }} — CartMind{% endblock %}
+{% block content %}
+<div class="auth-panel" style="text-align:center">
+  <h1 style="font-size:2.2rem;margin-bottom:8px">{{ '404' if not_found else 'Oops' }}</h1>
+  {% if not_found %}
+  <p class="meta">We couldn't find that page.</p>
+  {% else %}
+  <p class="meta">Something went wrong on our end. The team's been notified — try again in a moment.</p>
+  {% endif %}
+  <a href="/search" class="checkout-btn" style="display:inline-block;margin-top:18px;width:auto;padding:11px 24px">Back to shopping</a>
+</div>
+{% endblock %}

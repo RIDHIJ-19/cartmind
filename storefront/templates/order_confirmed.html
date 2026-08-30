@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Order Confirmed — CartMind{% endblock %}
+{% block content %}
+<div class="confirm-panel confirm-success">
+  <div class="confirm-icon">✅</div>
+  <h1>Order confirmed</h1>
+  <p>Your payment has been captured and verified.</p>
+  {% if items %}
+  <div class="confirm-summary">
+    {% for item in items %}
+    <div class="confirm-item">
+      <img src="{{ item.get('image', '') }}" alt="{{ item.name }}">
+      <div class="confirm-item-info">
+        <span class="confirm-item-name">{{ item.name }}{% if item.get('quantity', 1) > 1 %} × {{ item.quantity }}{% endif %}</span>
+        <span class="confirm-item-meta">{{ item.get('color', '')|capitalize }}</span>
+      </div>
+      <strong>₹{{ "{:,}".format(item.price_inr * item.get('quantity', 1)) }}</strong>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  <div class="confirm-details">
+    {% if order_id %}<div class="confirm-row"><span>Order ID</span><strong>{{ order_id }}</strong></div>{% endif %}
+    <div class="confirm-row confirm-row-total"><span>Amount paid</span><strong>₹{{ "{:,}".format(amount) }}</strong></div>
+  </div>
+  <div class="trust-badges"><span>🔒 Secure TEST MODE checkout</span><span>✓ Gated &amp; audited</span><span>✓ No real charge</span></div>
+  <a href="/search" class="confirm-cta">Continue shopping</a>
+</div>
+{% endblock %}

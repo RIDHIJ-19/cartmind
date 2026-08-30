@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Your profile — CartMind Storefront{% endblock %}
+{% block content %}
+<h1>{{ user.name or user.email }}</h1>
+<p class="meta">{{ user.email }}</p>
+
+<h2 style="margin-top:28px">Order history</h2>
+{% if orders %}
+<div id="orders">
+  {% for order in orders %}
+  <div class="order-row" data-order-id="{{ order.order_id }}">
+    <div>
+      <strong>{{ order.order_id or '—' }}</strong>
+      <div class="meta">{{ order.created_at }}</div>
+    </div>
+    <div class="status {{ order.status }}">{{ order.status }}</div>
+    <div>₹{{ "{:,}".format(order.amount_inr) }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="meta">No orders yet. <a href="/search">Start shopping</a>.</p>
+{% endif %}
+{% endblock %}

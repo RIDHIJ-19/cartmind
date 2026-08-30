@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Cart — CartMind{% endblock %}
+{% block content %}
+<div class="cart-page">
+  <div class="cart-panel">
+    <h1>Shopping Cart</h1>
+    <div id="cart-items">
+      {% for item in items %}
+      <div class="cart-row" data-product-id="{{ item.sku }}">
+        <img src="{{ item.get('image', '') }}" alt="{{ item.name }}">
+        <div>
+          <h3><a href="/product/{{ item.sku }}" style="color:var(--link);text-decoration:none">{{ item.name }}</a></h3>
+          <div class="meta">Qty: {{ item.quantity }} · {{ item.brand }}</div>
+          <form method="post" action="/cart/remove/{{ item.sku }}" style="margin-top:6px">
+            <button type="submit" class="link-button" style="color:var(--link);font-weight:400;padding:0;background:none">Remove</button>
+          </form>
+        </div>
+        <strong>₹{{ "{:,}".format(item.price_inr * item.quantity) }}</strong>
+      </div>
+      {% else %}
+      <p class="meta">Your cart is empty. <a href="/search">Continue shopping</a>.</p>
+      {% endfor %}
+    </div>
+    {% if items %}
+    <div class="cart-total" style="display:flex;justify-content:space-between;align-items:center">
+      <form method="post" action="/cart/clear"><button type="submit" class="link-button" style="color:var(--red);font-weight:700;padding:0;background:none">Clear cart</button></form>
+      <span>Subtotal ({{ items|sum(attribute='quantity') }} items): <strong>₹{{ "{:,}".format(total) }}</strong></span>
+    </div>
+    {% endif %}
+  </div>
+  <div class="summary-panel" data-cart-total="{{ total }}">
+    <div class="summary-total">Subtotal: ₹{{ "{:,}".format(total) }}</div>
+    <a href="/checkout" class="checkout-btn" data-action="go-to-checkout">Proceed to checkout</a>
+  </div>
+</div>
+{% endblock %}

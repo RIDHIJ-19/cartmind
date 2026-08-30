@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Log in — CartMind Storefront{% endblock %}
+{% block content %}
+<div class="auth-panel">
+  <h1>Log in</h1>
+  {% if error %}<div class="blocked">{{ error }}</div>{% endif %}
+  <form method="post" class="auth-form">
+    <label>Email<input type="email" name="email" required autofocus></label>
+    <label>Password<input type="password" name="password" required></label>
+    <button type="submit">Log in</button>
+  </form>
+  <p class="meta">No account? <a href="/signup">Sign up</a></p>
+</div>
+{% endblock %}

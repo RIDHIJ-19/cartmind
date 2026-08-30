@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Payment Failed — CartMind{% endblock %}
+{% block content %}
+<div class="confirm-panel confirm-failed">
+  <div class="confirm-icon">✕</div>
+  <h1>Payment failed</h1>
+  <p>{{ reason }}</p>
+  <div class="trust-badges"><span>✓ No charge was made</span><span>✓ Your cart is unchanged</span></div>
+  <a href="/cart" class="confirm-cta">Back to cart</a>
+</div>
+{% endblock %}

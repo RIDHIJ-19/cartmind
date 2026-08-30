@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ q or 'All products' }} — CartMind{% endblock %}
+{% block content %}
+<div class="search-layout">
+  <aside class="filters">
+    <h3>Department</h3>
+    <div class="filter-group swatch-row">
+      {% for cat in ['fashion','sports'] %}
+        <a href="/search?q={{ q }}&category={{ cat }}&color={{ color }}&max_price={{ max_price or '' }}" class="swatch {{ 'active' if category == cat }}">{{ cat|capitalize }}</a>
+      {% endfor %}
+      {% if category %}<a href="/search?q={{ q }}&color={{ color }}&max_price={{ max_price or '' }}" class="swatch">Clear</a>{% endif %}
+    </div>
+    <h3>Color</h3>
+    <div class="filter-group swatch-row">
+      {% for c in ['red','black','blue','white','green','pink'] %}
+        <a href="/search?q={{ q }}&category={{ category }}&color={{ c }}&max_price={{ max_price or '' }}" class="swatch {{ 'active' if color == c }}">{{ c|capitalize }}</a>
+      {% endfor %}
+      {% if color %}<a href="/search?q={{ q }}&category={{ category }}&max_price={{ max_price or '' }}" class="swatch">Clear</a>{% endif %}
+    </div>
+    <h3>Price</h3>
+    <div class="filter-group swatch-row">
+      {% for label, cap in [('Under ₹800', 800), ('Under ₹1,200', 1200), ('Under ₹1,800', 1800)] %}
+        <a href="/search?q={{ q }}&category={{ category }}&color={{ color }}&max_price={{ cap }}" class="swatch {{ 'active' if max_price == cap }}">{{ label }}</a>
+      {% endfor %}
+    </div>
+  </aside>
+  <section>
+    <div class="results-head">
+      <span><strong>{{ products|length }}</strong> result{{ 's' if products|length != 1 }}{% if q %} for "<strong>{{ q }}</strong>"{% endif %}{% if color %} in {{ color }}{% endif %}</span>
+    </div>
+    <div class="grid" id="results">
+      {% for p in products %}
+      <article class="product-card"
+           data-product-id="{{ p.sku }}"
+           data-price="{{ p.price_inr }}"
+           data-color="{{ p.get('color', '') }}"
+           data-category="{{ p.category }}">
+        <a href="/product/{{ p.sku }}"><img src="{{ p.get('image', '') }}" alt="{{ p.name }}" loading="lazy"></a>
+        <div class="product-body">
+          <div class="brand-line">{{ p.brand }}</div>
+          <h3><a href="/product/{{ p.sku }}">{{ p.name }}</a></h3>
+          <div class="rating"><span class="stars">{{ '★' * (p.get('rating', 4.5)|round|int) }}{{ '☆' * (5 - (p.get('rating', 4.5)|round|int)) }}</span>{{ p.get('rating', 4.5) }}</div>
+          <div class="price"><span class="rupee">₹</span>{{ "{:,}".format(p.price_inr) }}</div>
+          <div class="badge-row">
+            {% if p.get('stock', 0) > 0 %}<span class="badge stock">In stock</span>{% endif %}
+          </div>
+        </div>
+        <a href="/product/{{ p.sku }}" class="view-btn" data-action="view-product">View product</a>
+      </article>
+      {% else %}
+      <p>No products matched your search.</p>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

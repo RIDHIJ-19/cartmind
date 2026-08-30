@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Owner console — CartMind</title>
+<style>
+:root{
+  --nav:#131921;--nav-soft:#1e2534;--accent:#ff8a3d;--accent-soft:#fff1e6;
+  --wash:#f6f7fb;--line:#e9ebf0;--ink:#1a1d29;--muted:#6b7280;
+  --green:#0aab7c;--red:#e53e3e;--amber:#dd8f1e;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:var(--wash);color:var(--ink);font-size:14px}
+a{color:inherit;text-decoration:none}
+
+.shell{display:flex;min-height:100vh}
+
+/* Sidebar */
+.sidebar{width:230px;flex-shrink:0;background:var(--nav);color:#fff;display:flex;flex-direction:column;padding:22px 0;position:sticky;top:0;height:100vh}
+.sidebar-brand{font-size:1.25rem;font-weight:800;padding:0 24px 24px;border-bottom:1px solid rgba(255,255,255,.08)}
+.sidebar-brand span{color:var(--accent)}
+.sidebar-brand small{display:block;color:#9aa3b5;font-size:.68rem;font-weight:400;letter-spacing:.08em;text-transform:uppercase;margin-top:4px}
+.sidebar-nav{flex:1;padding:18px 0}
+.sidebar-nav a{display:flex;align-items:center;gap:10px;padding:11px 24px;color:#c7cbd6;font-size:.86rem;font-weight:600;border-left:3px solid transparent}
+.sidebar-nav a:hover{background:var(--nav-soft);color:#fff}
+.sidebar-nav a .ico{width:18px;text-align:center}
+.sidebar-foot{padding:0 24px}
+.sidebar-foot button{width:100%;background:none;border:1px solid rgba(255,255,255,.18);color:#c7cbd6;padding:9px;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:700}
+.sidebar-foot button:hover{background:rgba(255,255,255,.06);color:#fff}
+.sidebar-foot a{display:block;margin-top:10px;text-align:center;color:#8891a3;font-size:.76rem}
+
+/* Main */
+.main{flex:1;min-width:0;padding:26px 30px 50px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.topbar h1{font-size:1.35rem;font-weight:800;margin:0}
+.topbar-right{display:flex;align-items:center;gap:12px}
+.topbar .chip{background:#fff;border:1px solid var(--line);border-radius:20px;padding:6px 14px;font-size:.78rem;font-weight:700;color:var(--muted)}
+
+/* Notification bell */
+.notif-bell{position:relative}
+.notif-bell summary{list-style:none;cursor:pointer;width:40px;height:40px;border-radius:50%;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:1.05rem;position:relative;box-shadow:0 2px 8px rgba(20,25,40,.06)}
+.notif-bell summary::-webkit-details-marker{display:none}
+.notif-bell summary:hover{background:var(--wash)}
+.notif-count{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:.62rem;font-weight:800;min-width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--wash)}
+.notif-panel{position:absolute;right:0;top:48px;width:320px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(20,25,40,.18);z-index:20;max-height:400px;overflow-y:auto}
+.notif-panel-head{padding:12px 16px;font-weight:800;font-size:.85rem;border-bottom:1px solid var(--line)}
+.notif-item{display:flex;gap:10px;padding:12px 16px;border-bottom:1px solid var(--line);font-size:.8rem}
+.notif-item:last-child{border-bottom:0}
+.notif-ico{flex-shrink:0}
+.notif-empty{padding:20px 16px;text-align:center;color:var(--muted);font-size:.82rem}
+
+.alerts{display:flex;flex-direction:column;gap:8px;margin-bottom:20px}
+.alert{display:flex;gap:10px;align-items:flex-start;padding:12px 15px;border-radius:10px;font-size:.83rem}
+.alert strong{display:block;margin-bottom:2px}
+.alert-detail{font-weight:400;opacity:.85;font-size:.78rem;line-height:1.4}
+.alert-critical{background:#fdeaea;border:1px solid #f3c6c6;color:var(--red)}
+.alert-warning{background:#fff4e5;border:1px solid #f3d9a8;color:var(--amber)}
+.alert-info{background:#eaf3ff;border:1px solid #c9dcf7;color:#2457d6}
+.notif-item.notif-critical .notif-ico,.notif-item.notif-critical strong{color:var(--red)}
+.notif-item.notif-warning .notif-ico,.notif-item.notif-warning strong{color:var(--amber)}
+.notif-item.notif-info .notif-ico,.notif-item.notif-info strong{color:#2457d6}
+
+/* Stat cards */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.stat-card{background:linear-gradient(155deg,#fff 0%,#fcfcfd 100%);border-radius:14px;padding:18px;box-shadow:0 4px 16px rgba(20,25,40,.07),inset 0 1px 0 rgba(255,255,255,.6);display:flex;flex-direction:column;gap:10px;transition:transform .15s,box-shadow .15s}
+.stat-card:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(20,25,40,.12)}
+.stat-card .ico-chip{width:38px;height:38px;border-radius:10px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:1.1rem}
+.stat-card span{color:var(--muted);font-size:.78rem;font-weight:600}
+.stat-card strong{font-size:1.5rem;font-weight:800}
+
+/* Panel grid */
+.panel-grid{display:grid;grid-template-columns:1.6fr 1fr;gap:16px;margin-bottom:16px}
+.panel{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 10px rgba(20,25,40,.05)}
+.panel-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
+.panel h2{font-size:.95rem;font-weight:800;margin:0}
+.panel .hint{font-size:.72rem;color:var(--muted);font-weight:400}
+
+/* Line chart */
+.line-chart{width:100%;height:170px}
+.line-fill{fill:url(#lineGrad)}
+.line-stroke{fill:none;stroke:var(--accent);stroke-width:2.5}
+.line-dot{fill:var(--accent);stroke:#fff;stroke-width:2}
+.chart-axis-label{font-size:8px;fill:var(--muted)}
+
+/* Donut */
+.donut-wrap{display:flex;align-items:center;gap:18px}
+.donut{width:130px;height:130px;flex-shrink:0}
+.donut-seg{transition:stroke-width .15s}
+.donut-seg:hover{stroke-width:23}
+.donut-total{font-size:20px;font-weight:800;fill:var(--ink)}
+.donut-total-label{font-size:8px;fill:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.legend{display:flex;flex-direction:column;gap:9px;flex:1;min-width:0}
+.legend-row{display:flex;align-items:center;gap:8px;font-size:.8rem;text-transform:capitalize}
+.legend-row strong{margin-left:auto;font-size:.78rem}
+.legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+
+/* Funnel */
+.funnel-chart{width:100%}
+.funnel-seg{transition:opacity .15s;cursor:default}
+.funnel-seg:hover{opacity:.85}
+.funnel-text{font-size:9.5px;fill:#fff;font-weight:700;text-anchor:middle;pointer-events:none}
+
+/* Gauge */
+.gauge-wrap{display:flex;flex-direction:column;align-items:center}
+.gauge{width:200px;height:120px}
+.gauge-pct{font-size:1.6rem;font-weight:800;fill:var(--ink)}
+.gauge-note{text-align:center;font-size:.78rem;color:var(--muted);margin-top:8px;line-height:1.5}
+
+/* Explanations */
+.chart-explain{font-size:.76rem;color:var(--muted);line-height:1.55;margin:12px 0 0;padding-top:12px;border-top:1px dashed var(--line)}
+
+/* Ledger */
+.ledger-row{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff;transition:box-shadow .15s,border-color .15s}
+.ledger-row:hover{box-shadow:0 6px 18px rgba(20,25,40,.08);border-color:#d7dae2}
+.ledger-row[open]{border-color:var(--accent)}
+.ledger-row summary{display:grid;grid-template-columns:2fr .9fr 1fr 1fr;gap:16px;align-items:center;padding:14px 16px;cursor:pointer;list-style:none;border-radius:12px}
+.ledger-row summary::-webkit-details-marker{display:none}
+.ledger-main{min-width:0}
+.ledger-id{font-weight:800;font-size:.92rem;color:var(--ink);font-family:"Courier New",monospace;letter-spacing:-.01em}
+.ledger-items{font-size:.8rem;font-weight:600;color:var(--nav);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ledger-amount{font-weight:800;font-size:.98rem;color:var(--ink)}
+.ledger-time{font-size:.78rem;color:var(--muted);font-weight:600}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px}
+.dot-paid,.dot-captured,.dot-success{background:#fff}
+.dot-failed{background:#fff}
+.dot-created,.dot-awaiting_checkout{background:#fff}
+.status-pill{display:inline-flex;align-items:center;text-transform:capitalize;font-weight:800;font-size:.76rem;padding:6px 12px;border-radius:20px;width:fit-content}
+.status-pill-paid,.status-pill-captured,.status-pill-success{background:#e6f8f1;color:var(--green)}
+.status-pill-failed{background:#fdeaea;color:var(--red)}
+.status-pill-created,.status-pill-awaiting_checkout{background:#fff4e5;color:var(--amber)}
+.trail{padding:2px 16px 16px;display:flex;flex-direction:column;gap:8px}
+.trail-step{border-left:3px solid var(--line);padding:7px 11px;font-size:.8rem;border-radius:0 8px 8px 0;background:var(--wash)}
+.trail-step.blocked{border-left-color:var(--red)}
+.trail-step.allowed,.trail-step.confirmed,.trail-step.created{border-left-color:var(--green)}
+.muted{color:var(--muted);font-size:.8rem}
+
+/* SKU bars */
+.sku-row{padding:9px 0;border-bottom:1px solid var(--line);font-size:.82rem}
+.sku-row:last-child{border-bottom:0}
+.sku-row-head{display:flex;justify-content:space-between;margin-bottom:6px}
+.bar-track{background:var(--wash);border-radius:4px;height:8px;overflow:hidden}
+.sku-fill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--nav),var(--accent))}
+
+/* Demand table */
+.demand-table{display:flex;flex-direction:column}
+.demand-row{display:grid;grid-template-columns:1.4fr .6fr .6fr 1.1fr 1.8fr;gap:12px;align-items:center;padding:11px 4px;border-bottom:1px solid var(--line);font-size:.82rem;border-radius:8px}
+.demand-row:hover{background:var(--wash)}
+.demand-row:last-child{border-bottom:0}
+.demand-head{font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700;border-bottom:2px solid var(--line)}
+.demand-head:hover{background:none}
+.signal{display:inline-block;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:700;width:fit-content}
+.signal-reorder{background:#fdeaea;color:var(--red)}
+.signal-watch{background:#fff4e5;color:var(--amber)}
+.signal-slow{background:var(--wash);color:var(--muted)}
+.signal-steady{background:#e6f8f1;color:var(--green)}
+
+.demand-summary{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.demand-chip{background:var(--wash);border-radius:20px;padding:6px 14px;font-size:.78rem;color:var(--muted);font-weight:600}
+.demand-chip strong{color:var(--ink);margin-right:4px}
+.demand-chip-reorder strong{color:var(--red)}
+.demand-chip-watch strong{color:var(--amber)}
+.demand-chip-slow strong{color:var(--muted)}
+.demand-chip-steady strong{color:var(--green)}
+.demand-stock-cell{display:flex;align-items:center;gap:8px}
+.demand-stock-fill{display:block;height:100%;border-radius:4px}
+.signal-fill-reorder{background:var(--red)}
+.signal-fill-watch{background:var(--amber)}
+.signal-fill-slow{background:#b7bcc7}
+.signal-fill-steady{background:var(--green)}
+
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+
+@media(max-width:1050px){.panel-grid,.two-col{grid-template-columns:1fr}.stat-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:700px){.sidebar{display:none}.stat-grid{grid-template-columns:1fr}.demand-row{grid-template-columns:1fr;gap:2px}.demand-head{display:none}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="sidebar-brand">Cart<span>Mind</span><small>Owner console</small></div>
+    <nav class="sidebar-nav">
+      <a href="#top"><span class="ico">&#9635;</span>Dashboard</a>
+      <a href="#ledger"><span class="ico">&#128179;</span>Orders</a>
+      <a href="#demand"><span class="ico">&#128230;</span>Products</a>
+      <a href="#blocked"><span class="ico">&#9888;</span>Blocked attempts</a>
+      <a href="/search"><span class="ico">&#8617;</span>Storefront</a>
+    </nav>
+    <div class="sidebar-foot">
+      <form method="post" action="/owner/logout"><button type="submit">Sign out</button></form>
+    </div>
+  </aside>
+
+  <main class="main" id="top">
+    <div class="topbar">
+      <h1>Dashboard</h1>
+      <div class="topbar-right">
+        <details class="notif-bell">
+          <summary>
+            &#128276;
+            {% if alerts %}<span class="notif-count">{{ alerts|length }}</span>{% endif %}
+          </summary>
+          <div class="notif-panel">
+            <div class="notif-panel-head">Notifications</div>
+            {% for alert in alerts %}
+            <div class="notif-item notif-{{ alert.severity }}">
+              <span class="notif-ico">{{ alert.icon|safe }}</span>
+              <div><strong>{{ alert.title }}</strong><div class="muted">{{ alert.detail }}</div></div>
+            </div>
+            {% else %}
+            <div class="notif-empty">All clear — nothing needs attention right now.</div>
+            {% endfor %}
+          </div>
+        </details>
+        <span class="chip">{{ users_count }} registered buyer{{ 's' if users_count != 1 }}</span>
+      </div>
+    </div>
+
+    {% if alerts %}
+    <div class="alerts">
+      {% for alert in alerts %}
+      <div class="alert alert-{{ alert.severity }}">
+        <span class="notif-ico">{{ alert.icon|safe }}</span>
+        <div><strong>{{ alert.title }}</strong><div class="alert-detail">{{ alert.detail }}</div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="ico-chip">&#8377;</div><span>Captured volume</span><strong>&#8377;{{ "{:,}".format(volume) }}</strong></div>
+      <div class="stat-card"><div class="ico-chip">&#10003;</div><span>Success rate</span><strong>{{ stats.success_rate }}%</strong></div>
+      <div class="stat-card"><div class="ico-chip">&#128179;</div><span>Successful orders</span><strong>{{ stats.successful }}</strong></div>
+      <div class="stat-card"><div class="ico-chip">&#8942;</div><span>Avg. order value</span><strong>&#8377;{{ "{:,}".format(avg_order) }}</strong></div>
+    </div>
+
+    <svg width="0" height="0" style="position:absolute">
+      <defs>
+        <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+          <feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#131921" flood-opacity="0.18"></feDropShadow>
+        </filter>
+        <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#ff8a3d" flood-opacity="0.45"></feDropShadow>
+        </filter>
+        <linearGradient id="lineGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#ff8a3d" stop-opacity="0.4"></stop>
+          <stop offset="100%" stop-color="#ff8a3d" stop-opacity="0"></stop>
+        </linearGradient>
+        <linearGradient id="strokeGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#131921"></stop>
+          <stop offset="100%" stop-color="#ff8a3d"></stop>
+        </linearGradient>
+        <linearGradient id="gaugeGrad" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stop-color="#131921"></stop>
+          <stop offset="100%" stop-color="#ff8a3d"></stop>
+        </linearGradient>
+        <radialGradient id="donutSheen" cx="35%" cy="30%" r="70%">
+          <stop offset="0%" stop-color="#fff" stop-opacity="0.35"></stop>
+          <stop offset="100%" stop-color="#fff" stop-opacity="0"></stop>
+        </radialGradient>
+      </defs>
+    </svg>
+
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-head"><h2>Revenue analytics</h2><span class="hint">Last 7 days · captured payments</span></div>
+        <svg class="line-chart" viewBox="0 0 350 145" preserveAspectRatio="none">
+          <line x1="0" y1="120" x2="350" y2="120" stroke="var(--line)" stroke-width="1"></line>
+          <line x1="0" y1="80" x2="350" y2="80" stroke="var(--line)" stroke-width="0.5" stroke-dasharray="3 4"></line>
+          <line x1="0" y1="40" x2="350" y2="40" stroke="var(--line)" stroke-width="0.5" stroke-dasharray="3 4"></line>
+          <path d="{{ area_path }}" class="line-fill"></path>
+          <polyline points="{{ line_path }}" class="line-stroke" filter="url(#glow)"></polyline>
+          {% for point in line_points %}
+          <circle cx="{{ point[0] }}" cy="{{ point[1] }}" r="3.6" class="line-dot">
+            <title>{{ volume_labels[loop.index0] }}: &#8377;{{ "{:,}".format(volume_series[loop.index0].value) }}</title>
+          </circle>
+          <text x="{{ point[0] }}" y="138" text-anchor="middle" class="chart-axis-label">{{ volume_labels[loop.index0] }}</text>
+          {% endfor %}
+        </svg>
+        <p class="chart-explain">Each point is one day's captured (paid) revenue. The line only moves when a payment actually clears the Safety Kernel and Razorpay confirms it — blocked or failed attempts never appear here.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Revenue by category</h2></div>
+        {% if category_segments %}
+        <div class="donut-wrap">
+          <svg class="donut" viewBox="0 0 140 140" filter="url(#softShadow)">
+            <circle cx="70" cy="70" r="52" fill="none" stroke="var(--wash)" stroke-width="20"></circle>
+            {% for seg in category_segments %}
+            <circle cx="70" cy="70" r="52" fill="none" stroke="{{ seg.color }}" stroke-width="20"
+              stroke-dasharray="{{ seg.dasharray }}" stroke-dashoffset="{{ seg.offset }}"
+              transform="rotate(-90 70 70)" class="donut-seg">
+              <title>{{ seg.category }}: &#8377;{{ "{:,}".format(seg.revenue) }} ({{ seg.pct }}%)</title>
+            </circle>
+            {% endfor %}
+            <circle cx="70" cy="70" r="52" fill="url(#donutSheen)" stroke="none"></circle>
+            <text x="70" y="65" text-anchor="middle" class="donut-total">&#8377;{{ "%.1fk"|format((category_segments|sum(attribute='revenue'))/1000) }}</text>
+            <text x="70" y="82" text-anchor="middle" class="donut-total-label">total</text>
+          </svg>
+          <div class="legend">
+            {% for seg in category_segments %}
+            <div class="legend-row"><span class="legend-dot" style="background:{{ seg.color }}"></span>{{ seg.category }}<strong>{{ seg.pct }}%</strong></div>
+            {% endfor %}
+          </div>
+        </div>
+        <p class="chart-explain">Each slice is that category's share of captured revenue, computed straight from paid order line-items — not guessed or weighted.</p>
+        {% else %}
+        <p class="muted">No captured sales yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-head"><h2>Manual vs. chat-agent checkouts</h2><span class="hint">Who initiated the payment</span></div>
+        {% if channel_segments and channel_total > 0 %}
+        <div class="donut-wrap">
+          <svg class="donut" viewBox="0 0 140 140" filter="url(#softShadow)">
+            <circle cx="70" cy="70" r="52" fill="none" stroke="var(--wash)" stroke-width="20"></circle>
+            {% for seg in channel_segments %}
+            {% if seg.n > 0 %}
+            <circle cx="70" cy="70" r="52" fill="none" stroke="{{ seg.color }}" stroke-width="20"
+              stroke-dasharray="{{ seg.dasharray }}" stroke-dashoffset="{{ seg.offset }}"
+              transform="rotate(-90 70 70)" class="donut-seg">
+              <title>{{ seg.label }}: {{ seg.n }} ({{ seg.pct }}%)</title>
+            </circle>
+            {% endif %}
+            {% endfor %}
+            <circle cx="70" cy="70" r="52" fill="url(#donutSheen)" stroke="none"></circle>
+            <text x="70" y="65" text-anchor="middle" class="donut-total">{{ channel_total }}</text>
+            <text x="70" y="82" text-anchor="middle" class="donut-total-label">checkouts</text>
+          </svg>
+          <div class="legend">
+            {% for seg in channel_segments %}
+            <div class="legend-row"><span class="legend-dot" style="background:{{ seg.color }}"></span>{{ seg.label }}<strong>{{ seg.n }} ({{ seg.pct }}%)</strong></div>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <p class="muted">No checkouts recorded yet.</p>
+        {% endif %}
+        <p class="chart-explain">Tagged at the moment each order is created — a manual click through the storefront vs. the in-page chat agent completing checkout on the buyer's behalf, gated the same way either time.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Capture rate by channel</h2></div>
+        {% for seg in channel_segments %}
+        <div class="sku-row">
+          <div class="sku-row-head"><span><span class="legend-dot" style="background:{{ seg.color }}"></span> {{ seg.label }}</span><strong>{{ seg.captured }}/{{ seg.n }} captured</strong></div>
+          <div class="bar-track"><div class="sku-fill" style="width:{{ (seg.captured / seg.n * 100)|round|int if seg.n else 0 }}%;background:{{ seg.color }}"></div></div>
+        </div>
+        {% endfor %}
+        <p class="chart-explain">Same Safety Kernel, same cap, same audit trail either way — this just shows whether the agent's payments clear at the same rate as manual ones, or stall somewhere a human wouldn't.</p>
+      </div>
+    </div>
+
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-head"><h2>Checkout funnel</h2><span class="hint">Explainable — where the gate stops a transaction</span></div>
+        <svg class="funnel-chart" viewBox="0 0 350 {{ funnel_height }}">
+          {% for stage in funnel %}
+          <polygon points="{{ stage.points }}" fill="{{ stage.color }}" filter="url(#softShadow)" class="funnel-seg">
+            <title>{{ stage.label }}: {{ stage.n }} ({{ stage.pct }}%)</title>
+          </polygon>
+          <text x="175" y="{{ stage.label_y }}" text-anchor="middle" class="funnel-text">{{ stage.label }} &middot; {{ stage.n }} ({{ stage.pct }}%)</text>
+          {% endfor %}
+        </svg>
+        <p class="chart-explain">Each layer is a real gate in the pipeline (cart policy → Safety Kernel → Razorpay capture). The narrowing width is exactly how many transactions survived that stage — no smoothing.</p>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Policy cap usage</h2></div>
+        <div class="gauge-wrap">
+          <svg class="gauge" viewBox="0 0 200 115" filter="url(#softShadow)">
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="var(--wash)" stroke-width="16" stroke-linecap="round"></path>
+            <path d="M 20 100 A 80 80 0 0 1 180 100" fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round"
+              stroke-dasharray="{{ (gauge_pct/100*gauge_arc)|round(2) }} {{ gauge_arc }}"></path>
+            <circle cx="100" cy="100" r="6" fill="var(--nav)"></circle>
+            <line x1="100" y1="100" x2="{{ needle_x }}" y2="{{ needle_y }}" stroke="var(--nav)" stroke-width="3" stroke-linecap="round"></line>
+            <text x="100" y="92" text-anchor="middle" class="gauge-pct">{{ gauge_pct }}%</text>
+          </svg>
+          <p class="gauge-note">Avg. captured order &#8377;{{ "{:,}".format(avg_order) }} against the Safety Kernel's &#8377;{{ "{:,}".format(policy_cap) }} per-transaction cap.</p>
+          <p class="chart-explain">This is deliberately conservative headroom, not utilization to worry about: it shows how close typical orders run to the hard ceiling the Safety Kernel enforces on every transaction.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" id="ledger" style="margin-bottom:16px">
+      <div class="panel-head"><h2>Payment ledger</h2><span class="hint">Click a row for its audit trail</span></div>
+      <p class="chart-explain" style="margin-bottom:14px">Every row is one checkout attempt. Expanding it shows the exact gate steps it passed through — cart policy, Safety Kernel, Razorpay — with the plain-English reason for each verdict.</p>
+      {% for row in ledger %}
+      <details class="ledger-row">
+        <summary>
+          <div class="ledger-main">
+            <div class="ledger-id">{{ row.payment.order_id or '—' }}</div>
+            <div class="ledger-items">{{ row.item_summary or 'No line-item detail recorded' }}</div>
+          </div>
+          <span class="status-pill status-pill-{{ row.payment.status }}"><span class="dot dot-{{ row.payment.status }}"></span>{{ row.payment.status }}</span>
+          <div class="ledger-amount">&#8377;{{ "{:,}".format(row.payment.amount_inr) }}</div>
+          <div class="ledger-time">{{ row.created_display }}</div>
+        </summary>
+        <div class="trail">
+          {% for step in row.trail %}
+          <div class="trail-step {{ step.status }}">
+            <strong>{{ step.action.replace('_', ' ') }}</strong> &rarr; {{ step.status }}
+            <div class="muted">{{ step.details.get('reason', '') }}</div>
+          </div>
+          {% else %}
+          <p class="muted">No audit steps matched this payment.</p>
+          {% endfor %}
+        </div>
+      </details>
+      {% else %}
+      <p class="muted">No payments recorded yet.</p>
+      {% endfor %}
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="panel-head"><h2>Top SKUs by revenue</h2></div>
+        {% set top_revenue = sku_sales[0].revenue_inr if sku_sales else 1 %}
+        {% for row in sku_sales %}
+        <div class="sku-row">
+          <div class="sku-row-head"><span>{{ row.name }} &times; {{ row.quantity }}</span><strong>&#8377;{{ "{:,}".format(row.revenue_inr) }}</strong></div>
+          <div class="bar-track"><div class="sku-fill" style="width:{{ (row.revenue_inr / top_revenue * 100)|round|int }}%"></div></div>
+        </div>
+        {% else %}
+        <p class="muted">No captured sales yet.</p>
+        {% endfor %}
+        <p class="chart-explain">Ranked by captured revenue, not units — a cheap fast-mover and an expensive slow-mover can trade places here.</p>
+      </div>
+      <div class="panel" id="blocked">
+        <div class="panel-head"><h2>Blocked attempts</h2><span class="hint">Gate rejections, with reason</span></div>
+        <p class="chart-explain">This is the "one failure handled gracefully" trail: every rejected checkout, in one place, with the exact rule that stopped it — nothing fails silently.</p>
+        {% for event in blocked %}
+        <div class="trail-step blocked" style="margin-bottom:8px">
+          <strong>{{ event.action.replace('_', ' ') }}</strong> &middot; &#8377;{{ "{:,}".format(event.amount_inr) }} &middot; <span class="muted">{{ event.created_at }}</span>
+          <div class="muted">{{ event.details.get('reason', '') }}</div>
+        </div>
+        {% else %}
+        <p class="muted">No blocked attempts recorded yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel" id="demand">
+      <div class="panel-head"><h2>Inventory &amp; demand forecast</h2><span class="hint">Rule-based signal — every row shows why</span></div>
+      <p class="chart-explain" style="margin-bottom:14px">No black-box model: stock vs. captured sales run through a fixed set of thresholds (out of stock → reorder, high sell-through → reorder soon, thin stock → watch, zero sales → promote). The "Why" column is that rule firing, in plain English.</p>
+      <div class="demand-summary">
+        <div class="demand-chip demand-chip-reorder"><strong>{{ demand_summary.reorder }}</strong> reorder</div>
+        <div class="demand-chip demand-chip-watch"><strong>{{ demand_summary.watch }}</strong> watch</div>
+        <div class="demand-chip demand-chip-slow"><strong>{{ demand_summary.slow }}</strong> slow</div>
+        <div class="demand-chip demand-chip-steady"><strong>{{ demand_summary.steady }}</strong> steady</div>
+      </div>
+      <div class="demand-table">
+        <div class="demand-row demand-head"><span>Product</span><span>Stock coverage</span><span>Sold</span><span>Signal</span><span>Why</span></div>
+        {% for row in demand %}
+        <div class="demand-row">
+          <span>{{ row.name }}</span>
+          <span class="demand-stock-cell">
+            <span class="bar-track" style="width:64px"><span class="demand-stock-fill signal-fill-{{ row.signal }}" style="width:{{ row.stock_pct }}%"></span></span>
+            <span class="muted">{{ row.stock }}</span>
+          </span>
+          <span>{{ row.sold }}</span>
+          <span class="signal signal-{{ row.signal }}">{{ row.icon|safe }} {{ row.action }}</span>
+          <span class="muted">{{ row.reason }}</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

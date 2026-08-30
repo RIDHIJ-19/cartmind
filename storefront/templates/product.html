@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ p.name }} — CartMind{% endblock %}
+{% block content %}
+<div class="breadcrumb"><a href="/search">All products</a> &rsaquo; <a href="/search?category={{ p.category }}">{{ p.category|capitalize }}</a> &rsaquo; {{ p.name }}</div>
+<div class="product-detail" data-product-id="{{ p.sku }}" data-price="{{ p.price_inr }}">
+  <div>
+    <img src="{{ p.get('image', '') }}" alt="{{ p.name }}">
+  </div>
+  <div class="product-info">
+    <h1>{{ p.name }}</h1>
+    <div class="brand-line">by {{ p.brand }}</div>
+    <div class="rating"><span class="stars">{{ '★' * (p.get('rating', 4.5)|round|int) }}{{ '☆' * (5 - (p.get('rating', 4.5)|round|int)) }}</span>{{ p.get('rating', 4.5) }} rating</div>
+    <div class="description">{{ p.description }}</div>
+  </div>
+  <div class="buybox">
+    <div class="price"><span class="rupee">₹</span>{{ "{:,}".format(p.price_inr) }}</div>
+    <div class="meta">{% if p.get('stock', 0) > 0 %}<span style="color:var(--green);font-weight:700">In stock</span> · {{ p.stock }} available{% else %}Out of stock{% endif %}</div>
+    <form method="post" action="/cart/add/{{ p.sku }}">
+      <button type="submit" data-action="add-to-cart">Add to Cart</button>
+    </form>
+    <div class="secure-row">🔒 TEST MODE only — no real money is charged. Payment is authenticated, gated, and recorded.</div>
+  </div>
+</div>
+{% endblock %}

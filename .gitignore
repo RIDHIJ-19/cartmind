@@ -1,0 +1,9 @@
+.env
+cartmind.db
+__pycache__/
+*.pyc
+agent/last_screenshot.png
+cm_last_history*.json
+cartmind-chrome-debug-profile/
+.venv/
+node_modules/
