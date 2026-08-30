@@ -10,3 +10,4 @@ numpy>=1.26.0
 gunicorn>=22.0.0
 flask-sock>=0.7.0
 gevent>=24.2.1
+packaging>=24.0
