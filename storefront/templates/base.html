@@ -35,6 +35,10 @@
       </div>
     </div>
     <div id="agent-log"></div>
+    <div id="agent-live-view" class="hidden">
+      <div id="agent-live-label">🔴 Watching Razorpay live…</div>
+      <img id="agent-live-frame" alt="Live view of the payment automation">
+    </div>
     <form id="agent-form">
       <input id="agent-input" type="text" placeholder="e.g. I want a black dress" autocomplete="off">
       <button type="button" id="agent-mic" aria-label="Record voice message" title="Record voice message">🎤</button>
@@ -187,11 +191,29 @@
     state.log.push(thinking);
     renderLog();
 
+    // Opened for every message (harmless if this turn never calls the
+    // payment tool) — lets the server push live CDP screencast frames here
+    // the moment it starts driving the real Razorpay checkout, so a headless/
+    // hosted deployment can still show the card being typed in real time.
+    const streamId = (crypto.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const liveView = document.getElementById('agent-live-view');
+    const liveFrame = document.getElementById('agent-live-frame');
+    let liveWs = null;
+    try {
+      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      liveWs = new WebSocket(`${wsProto}//${window.location.host}/ws/payment-stream/${streamId}`);
+      liveWs.onmessage = (ev) => {
+        liveFrame.src = 'data:image/jpeg;base64,' + ev.data;
+        liveView.classList.remove('hidden');
+        log.scrollTop = log.scrollHeight;
+      };
+    } catch (err) { liveWs = null; }
+
     try {
       const r = await fetch('/agent/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: state.history }),
+        body: JSON.stringify({ message: text, history: state.history, stream_id: streamId }),
       });
       const d = await r.json();
       thinking.text = d.reply || (d.error || 'Sorry, something went wrong.');
@@ -201,6 +223,8 @@
       }
       renderLog();
       saveState(state);
+      liveView.classList.add('hidden');
+      if (liveWs) { try { liveWs.close(); } catch (err) {} }
       if (d.payment_status === 'captured') {
         showToast('✅ Payment captured! Your cart has been cleared.');
       }
@@ -208,6 +232,8 @@
         setTimeout(() => { window.location.href = d.navigate; }, d.payment_status === 'captured' ? 1800 : 600);
       }
     } catch (err) {
+      liveView.classList.add('hidden');
+      if (liveWs) { try { liveWs.close(); } catch (e) {} }
       thinking.text = 'Could not reach the assistant.';
       renderLog();
     }

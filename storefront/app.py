@@ -22,9 +22,45 @@ from mandate import IntentMandate
 from razorpay_service import RazorpayService
 from safety_kernel import SafetyKernel
 
+from flask_sock import Sock
+
 app = Flask(__name__)
 app.secret_key = os.getenv("STOREFRONT_SECRET", "cartmind-dev-secret")
 app.jinja_env.auto_reload = True  # keep template edits live even with debug=False
+sock = Sock(app)
+
+# Live view of the payment automation: the frontend opens a WS with a
+# client-generated stream_id before sending the chat message, and
+# _run_test_payment (below) pushes CDP screencast frames to any socket
+# registered under that id while it drives the real Razorpay iframe. This is
+# what lets a HOSTED deployment (headless, no local desktop) still show the
+# card being typed live in the browser, instead of only a step-trail after
+# the fact.
+PAYMENT_STREAMS = {}
+
+
+@sock.route("/ws/payment-stream/<stream_id>")
+def payment_stream(ws, stream_id):
+    PAYMENT_STREAMS.setdefault(stream_id, []).append(ws)
+    try:
+        while True:
+            ws.receive(timeout=30)  # None on timeout — just keeps the handler (and socket) alive
+    except Exception:
+        pass  # client disconnected — ConnectionClosed or similar
+    finally:
+        if ws in PAYMENT_STREAMS.get(stream_id, []):
+            PAYMENT_STREAMS[stream_id].remove(ws)
+
+
+def _broadcast_frame(stream_id, base64_jpeg):
+    for ws in list(PAYMENT_STREAMS.get(stream_id, [])):
+        try:
+            ws.send(base64_jpeg)
+        except Exception:
+            try:
+                PAYMENT_STREAMS[stream_id].remove(ws)
+            except ValueError:
+                pass
 
 CATALOG = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8"))
 CATALOG_BY_SKU = {item["sku"]: item for item in CATALOG}
@@ -462,7 +498,7 @@ supported". Report the final status (captured or failed) back to the user plainl
 Keep replies short and concrete: what you found (name, price, SKU), what you're about to do, and why."""
 
 
-def agent_dispatch(name, tool_input):
+def agent_dispatch(name, tool_input, stream_id=None):
     if name == "search_catalog":
         results = filter_catalog(
             q=tool_input.get("query", ""),
@@ -516,7 +552,7 @@ def agent_dispatch(name, tool_input):
             card_number = DEFAULT_CARD["card_number"]
         expiry = tool_input.get("expiry") or DEFAULT_CARD["expiry"]
         cvv = tool_input.get("cvv") or DEFAULT_CARD["cvv"]
-        result = _run_test_payment(card_number, expiry, cvv)
+        result = _run_test_payment(card_number, expiry, cvv, stream_id=stream_id)
         if isinstance(result, dict) and result.get("status") == "captured":
             session["cart"] = {}
             result["cart_count"] = 0
@@ -610,50 +646,77 @@ def _browser_page():
                 page.close()
 
 
-def _run_test_payment(card_number, expiry, cvv):
+def _run_test_payment(card_number, expiry, cvv, stream_id=None):
     """Drives the real Razorpay TEST MODE checkout in the user's own browser.
     Returns a "steps" trail alongside the result so the chat can show what
     actually happened even when the automation's own browser window isn't
-    visible/in focus on the user's screen."""
+    visible/in focus on the user's screen. If stream_id is given, also pushes
+    a live CDP screencast to any /ws/payment-stream/<stream_id> socket, which
+    is how a headless/hosted deployment can still show the card being typed
+    in real time in the browser instead of only a step-trail afterward."""
     import browser_agent
 
     steps = ["Opened the checkout page"]
     with _browser_page() as (page, base_url):
-        # /checkout does several sequential Postgres round-trips (Neon, over
-        # the network) plus a live Razorpay order-creation API call before it
-        # can respond — this has been observed taking 15-20s on its own, so
-        # give it real headroom instead of the default 30s "load" wait
-        # (which would also wait on the external checkout.js script tag).
-        page.goto(f"{base_url}/checkout", timeout=45000, wait_until="domcontentloaded")
-        if "/login" in page.url:
-            return {"error": "Not logged in.", "blocked": True, "requires_login": True, "steps": steps}
-        blocked = page.query_selector('[data-checkout-blocked="true"]')
-        if blocked:
-            steps.append("Checkout was blocked before payment could start")
-            return {"blocked": True, "reason": blocked.query_selector("p").inner_text(), "steps": steps}
-        steps.append("Order created — opening the real Razorpay checkout modal")
-        summary = page.query_selector("#checkout-summary")
-        order_id = summary.get_attribute("data-order-id") if summary else None
-        order_amount = int(summary.get_attribute("data-order-amount") or 0) if summary else 0
-        result = browser_agent.pay_with_card(page, card_number, expiry, cvv)
-        result = dict(result)
-        result["order_id"] = order_id
-        result["amount_inr"] = order_amount // 100
-        error = result.get("error")
-        status = result.get("status")
-        if error and "did not render" in error:
-            # Failed before any typing happened — don't claim steps that
-            # never occurred.
+        cdp = None
+        if stream_id:
+            try:
+                cdp = page.context.new_cdp_session(page)
+                cdp.on("Page.screencastFrame", lambda params: (
+                    _broadcast_frame(stream_id, params["data"]),
+                    cdp.send("Page.screencastFrameAck", {"sessionId": params["sessionId"]}),
+                ))
+                cdp.send("Page.startScreencast", {"format": "jpeg", "quality": 60, "maxWidth": 960, "maxHeight": 720, "everyNthFrame": 1})
+            except Exception:
+                cdp = None
+        try:
+            return _drive_checkout(page, base_url, card_number, expiry, cvv, steps)
+        finally:
+            if cdp:
+                try:
+                    cdp.send("Page.stopScreencast")
+                except Exception:
+                    pass
+
+
+def _drive_checkout(page, base_url, card_number, expiry, cvv, steps):
+    import browser_agent
+
+    # /checkout does several sequential Postgres round-trips (Neon, over
+    # the network) plus a live Razorpay order-creation API call before it
+    # can respond — this has been observed taking 15-20s on its own, so
+    # give it real headroom instead of the default 30s "load" wait
+    # (which would also wait on the external checkout.js script tag).
+    page.goto(f"{base_url}/checkout", timeout=45000, wait_until="domcontentloaded")
+    if "/login" in page.url:
+        return {"error": "Not logged in.", "blocked": True, "requires_login": True, "steps": steps}
+    blocked = page.query_selector('[data-checkout-blocked="true"]')
+    if blocked:
+        steps.append("Checkout was blocked before payment could start")
+        return {"blocked": True, "reason": blocked.query_selector("p").inner_text(), "steps": steps}
+    steps.append("Order created — opening the real Razorpay checkout modal")
+    summary = page.query_selector("#checkout-summary")
+    order_id = summary.get_attribute("data-order-id") if summary else None
+    order_amount = int(summary.get_attribute("data-order-amount") or 0) if summary else 0
+    result = browser_agent.pay_with_card(page, card_number, expiry, cvv)
+    result = dict(result)
+    result["order_id"] = order_id
+    result["amount_inr"] = order_amount // 100
+    error = result.get("error")
+    status = result.get("status")
+    if error and "did not render" in error:
+        # Failed before any typing happened — don't claim steps that
+        # never occurred.
+        steps.append(f"Error: {error}")
+    else:
+        steps.append("Typed the card number, expiry, and CVV into Razorpay's form")
+        steps.append("Submitted the card and handled any contact/OTP/save-card prompts")
+        if status:
+            steps.append(f"Final status: {status}")
+        elif error:
             steps.append(f"Error: {error}")
-        else:
-            steps.append("Typed the card number, expiry, and CVV into Razorpay's form")
-            steps.append("Submitted the card and handled any contact/OTP/save-card prompts")
-            if status:
-                steps.append(f"Final status: {status}")
-            elif error:
-                steps.append(f"Error: {error}")
-        result["steps"] = steps
-        return result
+    result["steps"] = steps
+    return result
 
 
 def _run_visible_login(email, password, name_field):
@@ -742,6 +805,7 @@ def agent_chat():
     payload = request.get_json(force=True)
     user_message = payload.get("message", "").strip()
     history = payload.get("history", [])
+    stream_id = payload.get("stream_id")
     if not user_message:
         return jsonify({"error": "message is required"}), 400
 
@@ -810,7 +874,7 @@ def agent_chat():
             tool_input = json.loads(call.function.arguments or "{}")
             if call.function.name == "pay_with_test_card":
                 payment_tool_called = True
-            result, nav = agent_dispatch(call.function.name, tool_input)
+            result, nav = agent_dispatch(call.function.name, tool_input, stream_id=stream_id)
             if nav is not None:
                 navigate = nav  # last tool call that actually requests a navigation wins
             if isinstance(result, dict) and "cart_count" in result:

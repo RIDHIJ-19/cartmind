@@ -14,4 +14,7 @@ ENV PORT=10000
 EXPOSE 10000
 
 WORKDIR /app/storefront
-CMD gunicorn app:app --bind 0.0.0.0:${PORT} --workers 2 --threads 4 --timeout 120
+# gevent worker class is required for the live payment-stream WebSocket
+# (/ws/payment-stream/<id>) to actually upgrade under gunicorn — sync/
+# threaded workers can't hijack the socket the way flask-sock needs.
+CMD gunicorn app:app --bind 0.0.0.0:${PORT} --worker-class gevent --workers 2 --timeout 120
