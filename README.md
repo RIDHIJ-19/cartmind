@@ -19,6 +19,25 @@ Underneath both sits a policy core — `mandate.py`, `gating.py`,
 explicit confirmation, under a hard order-value cap, with every step
 (allowed or blocked) written to an auditable trail.
 
+## Screenshots
+
+| | |
+|---|---|
+| **Search / catalog** | **Product page** |
+| ![Search](docs/screenshots/search.png) | ![Product](docs/screenshots/product.png) |
+| **Cart** | **Checkout** |
+| ![Cart](docs/screenshots/cart.png) | ![Checkout](docs/screenshots/checkout.png) |
+| **Order confirmed** | **Order failed** |
+| ![Order confirmed](docs/screenshots/order_confirmed.png) | ![Order failed](docs/screenshots/order_failed.png) |
+
+**Chat widget** — search, add-to-cart, and checkout narrated conversationally:
+
+![Chatbot](docs/screenshots/chatbot.png)
+
+**Owner console** — revenue, funnel, manual-vs-agent split, and the full payment ledger, computed live from the audit trail:
+
+![Owner dashboard](docs/screenshots/owner.png)
+
 ## Design notes
 
 The project borrows the AP2 idea of separate intent, cart, and payment
