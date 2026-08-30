@@ -35,10 +35,6 @@
       </div>
     </div>
     <div id="agent-log"></div>
-    <div id="agent-live-view" class="hidden">
-      <div id="agent-live-label">🔴 Watching Razorpay live…</div>
-      <img id="agent-live-frame" alt="Live view of the payment automation">
-    </div>
     <form id="agent-form">
       <input id="agent-input" type="text" placeholder="e.g. I want a black dress" autocomplete="off">
       <button type="button" id="agent-mic" aria-label="Record voice message" title="Record voice message">🎤</button>
@@ -190,24 +186,34 @@
     const thinking = { role: 'assistant', text: 'Thinking…' };
     state.log.push(thinking);
     renderLog();
+    // Must be persisted now, not just held in this page's own JS state — a
+    // card-detail message navigates this tab away to the live-view page
+    // right below, and patchChatLog() there only sees whatever was actually
+    // written to sessionStorage by that point.
+    saveState(state);
 
-    // Opened for every message (harmless if this turn never calls the
-    // payment tool) — lets the server push live CDP screencast frames here
-    // the moment it starts driving the real Razorpay checkout, so a headless/
-    // hosted deployment can still show the card being typed in real time.
+    // Included on every message (harmless if this turn never calls the
+    // payment tool) — lets the server push live CDP screencast frames to
+    // /ws/payment-stream/<id> the moment it starts driving the real Razorpay
+    // checkout. When the message looks like it's supplying card details, we
+    // open a dedicated full-page live view in its own window (easier to
+    // record/present than a small inline panel) instead of rendering frames
+    // inside the chat itself.
     const streamId = (crypto.randomUUID && crypto.randomUUID()) || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const liveView = document.getElementById('agent-live-view');
-    const liveFrame = document.getElementById('agent-live-frame');
-    let liveWs = null;
-    try {
-      const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-      liveWs = new WebSocket(`${wsProto}//${window.location.host}/ws/payment-stream/${streamId}`);
-      liveWs.onmessage = (ev) => {
-        liveFrame.src = 'data:image/jpeg;base64,' + ev.data;
-        liveView.classList.remove('hidden');
-        log.scrollTop = log.scrollHeight;
-      };
-    } catch (err) { liveWs = null; }
+    if (/\d[\d ]{11,18}\d/.test(text)) {
+      // Fire the chat request first (server starts the payment + screencast
+      // as soon as it arrives), then hand this same tab over to the live
+      // view — a clean single-window shot for recording, at the cost of
+      // this page no longer being around to show the toast/reply itself;
+      // the live-view page redirects to /cart once the stream ends instead.
+      fetch('/agent/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, history: state.history, stream_id: streamId }),
+      }).catch(() => {});
+      window.location.href = `/live-view/${streamId}`;
+      return;
+    }
 
     try {
       const r = await fetch('/agent/chat', {
@@ -223,8 +229,6 @@
       }
       renderLog();
       saveState(state);
-      liveView.classList.add('hidden');
-      if (liveWs) { try { liveWs.close(); } catch (err) {} }
       if (d.payment_status === 'captured') {
         showToast('✅ Payment captured! Your cart has been cleared.');
       }
@@ -232,8 +236,6 @@
         setTimeout(() => { window.location.href = d.navigate; }, d.payment_status === 'captured' ? 1800 : 600);
       }
     } catch (err) {
-      liveView.classList.add('hidden');
-      if (liveWs) { try { liveWs.close(); } catch (e) {} }
       thinking.text = 'Could not reach the assistant.';
       renderLog();
     }

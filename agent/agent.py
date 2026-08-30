@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 
 from dotenv import load_dotenv
 
-load_dotenv(ROOT / ".env")
+load_dotenv(ROOT / ".env", override=True)
 
 import groq
 from groq import Groq

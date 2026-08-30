@@ -29,5 +29,5 @@ the phone/OTP values below when Razorpay Checkout asks for them.
    breakdown, and Volume by day on the owner console update correctly.
 
 
-
+pay with
 card number 5267318187975449, expiry 12/28, cvv 123 name = test

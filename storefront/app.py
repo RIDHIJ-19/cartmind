@@ -14,7 +14,7 @@ sys.path.insert(0, str(ROOT / "agent"))
 
 from dotenv import load_dotenv
 
-load_dotenv(ROOT / ".env")
+load_dotenv(ROOT / ".env", override=True)
 
 from database import CartMindDatabase
 from gating import GatingService
@@ -61,6 +61,34 @@ def _broadcast_frame(stream_id, base64_jpeg):
                 PAYMENT_STREAMS[stream_id].remove(ws)
             except ValueError:
                 pass
+
+
+def _broadcast_done(stream_id, payload):
+    """Sends the real outcome (where to redirect, a plain-language summary)
+    over the same socket the frames used, prefixed so the client can tell it
+    apart from a raw base64 frame. The live-view page opened this same tab
+    that used to run the chat widget, so it's the only place left that can
+    learn what actually happened — the original page navigated away before
+    it could ever read its own /agent/chat response."""
+    text = "__DONE__:" + json.dumps(payload)
+    for ws in list(PAYMENT_STREAMS.get(stream_id, [])):
+        try:
+            ws.send(text)
+        except Exception:
+            pass
+
+
+def _close_stream(stream_id):
+    """The automation stopping the screencast only stops new frames from
+    arriving — the WebSocket itself stays open forever otherwise (the
+    handler just loops on receive()), so the client's onclose never fires
+    and the live-view page never learns the payment is done. Close every
+    socket for this stream explicitly once we're finished with it."""
+    for ws in list(PAYMENT_STREAMS.pop(stream_id, [])):
+        try:
+            ws.close()
+        except Exception:
+            pass
 
 CATALOG = json.loads((ROOT / "catalog.json").read_text(encoding="utf-8"))
 CATALOG_BY_SKU = {item["sku"]: item for item in CATALOG}
@@ -346,6 +374,14 @@ def order_failed():
     return render_template("order_failed.html", reason=reason, cart_count=sum(get_cart().values()))
 
 
+@app.route("/live-view/<stream_id>")
+def live_view(stream_id):
+    """Standalone full-page live view of the payment automation's CDP
+    screencast — opened in its own window so it's easy to record/present,
+    instead of the small inline view inside the chat widget."""
+    return render_template("live_view.html", stream_id=stream_id)
+
+
 @app.route("/verify-payment", methods=["POST"])
 def verify_payment():
     payload = request.get_json(force=True)
@@ -557,11 +593,22 @@ def agent_dispatch(name, tool_input, stream_id=None):
             session["cart"] = {}
             result["cart_count"] = 0
             result["payment_status"] = "captured"
-            return result, f"/order-confirmed?order_id={result.get('order_id', '')}&amount={result.get('amount_inr', 0)}"
+            nav = f"/order-confirmed?order_id={result.get('order_id', '')}&amount={result.get('amount_inr', 0)}"
+            if stream_id:
+                _broadcast_done(stream_id, {
+                    "status": "captured", "navigate": nav,
+                    "summary": f"Payment captured — order {result.get('order_id', '')}, ₹{result.get('amount_inr', 0):,}.",
+                })
+                _close_stream(stream_id)
+            return result, nav
         if isinstance(result, dict):
             result["payment_status"] = "failed"
             reason = result.get("reason") or result.get("error") or f"Status: {result.get('status', 'unknown')}"
-            return result, f"/order-failed?reason={reason}"
+            nav = f"/order-failed?reason={reason}"
+            if stream_id:
+                _broadcast_done(stream_id, {"status": "failed", "navigate": nav, "summary": f"Payment failed — {reason}"})
+                _close_stream(stream_id)
+            return result, nav
         return result, None
 
     return {"error": f"Unknown tool {name}"}, None
@@ -672,6 +719,11 @@ def _run_test_payment(card_number, expiry, cvv, stream_id=None):
         try:
             return _drive_checkout(page, base_url, card_number, expiry, cvv, steps)
         finally:
+            # Only stop the screencast here — do NOT close the socket yet.
+            # The caller (agent_dispatch) still needs to send the __DONE__
+            # message with the real outcome over this same socket before
+            # closing it; closing here first would silently empty
+            # PAYMENT_STREAMS and make that send a no-op.
             if cdp:
                 try:
                     cdp.send("Page.stopScreencast")
@@ -1169,6 +1221,32 @@ def owner():
             "title": f"{len(slow_items)} product(s) with no captured sales",
             "detail": "Consider a promotion, bundle, or markdown — see the demand table for the full list.",
         })
+    # All-time failure rate — complements the last-hour spike alert above with
+    # a lifetime view, so a slow-burn problem (not just a sudden spike) still
+    # surfaces.
+    if stats["failed"] >= 3:
+        fail_pct = round((stats["failed"] / stats["initiated"]) * 100, 1) if stats["initiated"] else 0
+        alerts.append({
+            "severity": "warning", "icon": "&#10060;",
+            "title": f"{stats['failed']} failed payments all-time ({fail_pct}% of all attempts)",
+            "detail": "Lifetime total, not just the last hour — a steady failure rate is as worth investigating as a spike.",
+        })
+    # Which gate is actually doing the rejecting, over the same broader
+    # window used for the ledger below — tallied from the seven-check
+    # decision's ruleViolated field (falls back to the action name for the
+    # cart-policy gate, which doesn't break down into named sub-checks).
+    rule_counts = {}
+    for ev in database.blocked_events(200):
+        rule = (ev.get("details") or {}).get("ruleViolated") or ev.get("action", "unknown")
+        rule_counts[rule] = rule_counts.get(rule, 0) + 1
+    if rule_counts:
+        top_rule, top_count = max(rule_counts.items(), key=lambda kv: kv[1])
+        if top_count >= 3:
+            alerts.append({
+                "severity": "info", "icon": "&#128272;",
+                "title": f"{top_rule.replace('_', ' ').title()} is the most common block reason ({top_count})",
+                "detail": "Worth checking whether this limit is set correctly for real traffic, or whether it's catching what it should.",
+            })
 
     def _item_summary(payment):
         items = (payment.get("details") or {}).get("items", [])

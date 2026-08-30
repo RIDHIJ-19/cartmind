@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CartMind — Completing your payment</title>
+<link rel="stylesheet" href="/static/style.css">
+<style>
+  body{background:var(--wash)}
+  #wrap{max-width:1100px;margin:0 auto;padding:32px 24px;min-height:100vh;box-sizing:border-box}
+  #masthead{display:flex;align-items:center;gap:10px;margin-bottom:24px}
+  #masthead .brand{font-size:1.3rem;font-weight:800;color:var(--ink)}
+  #masthead .brand .accent{color:var(--accent)}
+  #masthead .sub{color:var(--muted);font-size:.85rem}
+
+  #split{display:flex;gap:28px;align-items:flex-start}
+  @media (max-width:820px){ #split{flex-direction:column} }
+
+  /* Left: a "browser window" mockup that hosts the live frames, so it
+     reads as a page updating rather than a video being played. */
+  #browser-mock{flex:1 1 62%;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(20,23,31,.08);overflow:hidden}
+  #chrome-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#eef0f3;border-bottom:1px solid var(--line)}
+  #chrome-dots{display:flex;gap:6px}
+  #chrome-dots span{width:9px;height:9px;border-radius:50%;background:#d7dae0}
+  #chrome-url{flex:1;background:#fff;border:1px solid var(--line);border-radius:6px;padding:4px 10px;font-size:.72rem;color:var(--muted);font-family:ui-monospace,Consolas,monospace;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+  #chrome-url::before{content:'🔒 ';font-size:.68rem}
+  /* aspect-ratio is set dynamically in JS from the first real frame's own
+     dimensions, so the box's shape always matches the actual captured
+     browser viewport — no cropping (object-fit:contain, full image, no
+     content cut off) and no letterboxing (box shape already matches). */
+  #stage{position:relative;aspect-ratio:4/3;background:#fbfbfa;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  /* No fade/transition at all — crossfading between two DIFFERENT moments
+     of a page that's actively changing looked like a double-exposure
+     flicker, which read worse than a clean, slow, throttled swap. */
+  #stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:none}
+  #stage img.show{display:block}
+  #placeholder{color:var(--muted);font-size:.9rem;text-align:center;max-width:320px;padding:24px}
+
+  /* Right: calm status panel — no per-frame jitter, just a settling state. */
+  #status-panel{flex:1 1 38%;background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;box-shadow:0 8px 28px rgba(20,23,31,.05)}
+  #status-panel h2{font-size:1.05rem;margin:0 0 6px}
+  #status-panel .lede{color:var(--muted);font-size:.85rem;margin:0 0 20px}
+  #steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+  #steps li{display:flex;align-items:flex-start;gap:10px;font-size:.86rem;color:var(--muted);transition:color .3s ease}
+  #steps li .dot{width:18px;height:18px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:.6rem;transition:all .3s ease}
+  #steps li.active{color:var(--ink);font-weight:600}
+  #steps li.active .dot{border-color:var(--accent);background:var(--accent);color:#fff}
+  #steps li.done .dot{border-color:var(--green);background:var(--green);color:#fff}
+  #steps li.done .dot::after{content:'✓'}
+  #steps li.active .dot::after{content:'';width:6px;height:6px;border-radius:50%;background:#fff}
+  .badge-row{margin-top:22px;padding-top:18px;border-top:1px solid var(--line);display:flex;gap:14px;font-size:.72rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="masthead">
+    <span class="brand">Cart<span class="accent">Mind</span></span>
+    <span class="sub">— completing your payment</span>
+  </div>
+
+  <div id="split">
+    <div id="browser-mock">
+      <div id="chrome-bar">
+        <div id="chrome-dots"><span></span><span></span><span></span></div>
+        <div id="chrome-url">checkout.razorpay.com</div>
+      </div>
+      <div id="stage">
+        <div id="placeholder">Opening a secure checkout session…</div>
+        <img id="frame" alt="">
+      </div>
+    </div>
+
+    <div id="status-panel">
+      <h2>Securing your payment</h2>
+      <p class="lede">CartMind is completing this purchase the same way you would — nothing happens without a real, verified transaction.</p>
+      <ul id="steps">
+        <li data-step="0"><span class="dot"></span> Opening checkout</li>
+        <li data-step="1"><span class="dot"></span> Loading Razorpay's secure form</li>
+        <li data-step="2"><span class="dot"></span> Entering card details</li>
+        <li data-step="3"><span class="dot"></span> Verifying with your bank</li>
+        <li data-step="4"><span class="dot"></span> Confirming your order</li>
+      </ul>
+      <div class="badge-row">
+        <span>🔒 TEST MODE</span>
+        <span>✓ Gated &amp; audited</span>
+        <span>✓ No real charge</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const streamId = {{ stream_id|tojson }};
+  const stepEls = Array.from(document.querySelectorAll('#steps li'));
+  const placeholder = document.getElementById('placeholder');
+  const frame = document.getElementById('frame');
+  let frameCount = 0;
+  let currentStep = -1;
+
+  function setStep(n) {
+    if (n <= currentStep) return;
+    currentStep = n;
+    stepEls.forEach((li, i) => {
+      li.classList.toggle('done', i < n);
+      li.classList.toggle('active', i === n);
+    });
+  }
+  setStep(0);
+
+  // Frames arrive at ~10-15/sec, far faster than a human needs to watch, and
+  // faster than any transition can settle — so decouple arrival from
+  // painting: always keep only the latest frame, and paint it on a slow,
+  // steady timer instead of on every arrival.
+  let latestFrame = null;
+  function showFrame(base64) {
+    frameCount++;
+    if (frameCount === 1) { placeholder.style.display = 'none'; setStep(1); }
+    latestFrame = base64;
+  }
+  const stage = document.getElementById('stage');
+  let aspectSet = false;
+  const RENDER_MS = 450; // ~2fps — a page settling, not a video
+  const renderTimer = setInterval(() => {
+    if (!latestFrame) return;
+    const base64 = latestFrame;
+    latestFrame = null;
+    frame.onload = () => {
+      if (!aspectSet && frame.naturalWidth && frame.naturalHeight) {
+        // Match the box's shape to the real captured viewport so
+        // object-fit:contain shows the whole frame with neither cropping
+        // nor empty letterbox space around it.
+        stage.style.aspectRatio = `${frame.naturalWidth} / ${frame.naturalHeight}`;
+        aspectSet = true;
+      }
+    };
+    frame.src = 'data:image/jpeg;base64,' + base64;
+    frame.classList.add('show');
+  }, RENDER_MS);
+
+  // The step list has no real per-step signal from the server mid-stream
+  // (only "a frame arrived" and "the stream closed"), so it used to sit on
+  // step 2 for the entire 50-90s automation and look stuck. Advance it on a
+  // realistic timed schedule instead — close still wins if it fires first
+  // or later than expected.
+  const stepTimers = [];
+  function scheduleStep(n, delayMs) {
+    stepTimers.push(setTimeout(() => setStep(n), delayMs));
+  }
+
+  // The chat widget's own page navigated here before it could ever read its
+  // own /agent/chat response, so its stored log is stuck on "Thinking…"
+  // forever unless something patches it. This page shares the same
+  // sessionStorage (same tab, same origin) — fix the stuck entry directly so
+  // reopening the widget later shows the real outcome instead of nothing.
+  function patchChatLog(summary) {
+    try {
+      const KEY = 'cartmind_agent_state';
+      const state = JSON.parse(sessionStorage.getItem(KEY));
+      if (!state || !Array.isArray(state.log)) return;
+      for (let i = state.log.length - 1; i >= 0; i--) {
+        if (state.log[i].role === 'assistant') {
+          state.log[i].text = summary;
+          break;
+        }
+      }
+      sessionStorage.setItem(KEY, JSON.stringify(state));
+    } catch (err) { /* best-effort only */ }
+  }
+
+  const wsProto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${wsProto}//${window.location.host}/ws/payment-stream/${streamId}`);
+  let received = false;
+  let finalNavigate = '/cart';
+
+  ws.onmessage = (ev) => {
+    if (typeof ev.data === 'string' && ev.data.startsWith('__DONE__:')) {
+      const payload = JSON.parse(ev.data.slice('__DONE__:'.length));
+      finalNavigate = payload.navigate || finalNavigate;
+      patchChatLog(payload.summary || '');
+      clearInterval(renderTimer);
+      stepTimers.forEach(clearTimeout);
+      stepEls.forEach((li) => li.classList.add('done'));
+      document.querySelector('#steps li[data-step="4"]').classList.remove('active');
+      setTimeout(() => { window.location.href = finalNavigate; }, 1800);
+      return;
+    }
+    const first = !received;
+    received = true;
+    showFrame(ev.data);
+    if (first) {
+      // The real automation has been observed taking 50-90s total end to
+      // end (remote DB + live Razorpay API latency), with no per-step
+      // signal in between — these estimates were tuned to a much faster
+      // run and reached "done" while the real payment was still working.
+      // Spread them across the actual observed range instead; the __DONE__
+      // message above always wins whenever it actually arrives.
+      scheduleStep(2, 8000);
+      scheduleStep(3, 35000);
+      scheduleStep(4, 65000);
+    }
+  };
+  ws.onclose = () => {
+    clearInterval(renderTimer);
+    stepTimers.forEach(clearTimeout);
+    // Only a fallback: if the socket closed without a __DONE__ message ever
+    // arriving (e.g. an unexpected server-side error), still get the user
+    // somewhere reasonable instead of leaving them stranded here.
+    if (received && finalNavigate === '/cart') {
+      setTimeout(() => { window.location.href = finalNavigate; }, 2200);
+    }
+  };
+})();
+</script>
+</body>
+</html>
