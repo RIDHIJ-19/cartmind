@@ -7,3 +7,4 @@ cm_last_history*.json
 cartmind-chrome-debug-profile/
 .venv/
 node_modules/
+Screenshot *.png

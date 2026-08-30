@@ -48,6 +48,8 @@ graph TB
     Routes["Catalog / cart / checkout routes"]
     ChatAPI["/agent/chat + /agent/transcribe"]
     Tools["Tool dispatch<br/>search · add_to_cart · go_to_checkout · pay_with_test_card"]
+    WS["/ws/payment-stream/id<br/>flask-sock"]
+    LiveView["/live-view/id page"]
   end
 
   subgraph Policy["Policy core (in-process, always-on)"]
@@ -68,6 +70,8 @@ graph TB
   LLM -- tool call --> Tools
   Tools --> Routes
   Tools --> Browser --> Razorpay
+  Browser -- CDP screencast --> WS
+  Widget --> LiveView --> WS
   Routes --> Mandate --> Gating --> Kernel
   Kernel -- allowed --> Razorpay
   Kernel -- blocked --> ChatAPI
@@ -76,7 +80,7 @@ graph TB
   Routes --> ChatAPI
 ```
 
-*Fig. 1 — Component view. The policy core sits between every route and Razorpay; the agent has no path that skips it.*
+*Fig. 1 — Component view. The policy core sits between every route and Razorpay; the agent has no path that skips it. The live payment view is a parallel, read-only channel — it can show what the browser is doing but has no path back into Tools or the policy core.*
 
 ### Design decisions
 
@@ -133,12 +137,31 @@ sequenceDiagram
 
 An earlier revision created a fresh Razorpay order on every `/checkout` load, including the automation's own internal reload before typing the card — so the order id shown to the shopper could silently diverge from the one actually charged. Fixed by reusing any existing `status="created"` order for the same user + amount, refreshing its stored item snapshot on reuse so catalog changes (e.g. images) don't freeze stale.
 
-### 3.4 — Local vs. hosted automation
+### 3.4 — Local vs. hosted automation, and the live payment view
 
-| Environment | Browser strategy | Visible to user? |
-|---|---|---|
-| Local dev | Attaches over CDP to the developer's own Chrome (`--remote-debugging-port`); falls back to a fresh maximized window | Yes — card types live on screen |
-| Hosted (Render / cloud) | Always launches its own headless Chromium (detected via `RENDER` env var) | No — same real capture, no display to draw on |
+| Environment | Browser strategy |
+|---|---|
+| Local dev | Attaches over CDP to the developer's own Chrome (`--remote-debugging-port`); falls back to a fresh maximized window |
+| Hosted (Render / cloud) | Always launches its own headless Chromium (detected via `RENDER` env var) |
+
+Both environments now look identical from the user's side: giving the chat a
+card navigates the tab to `/live-view/<stream_id>`, which opens a WebSocket
+to `/ws/payment-stream/<id>` and renders a live CDP screencast
+(`Page.startScreencast`) of the automation typing into the real Razorpay
+iframe. This closes what was originally a real gap — headless automation
+used to be provably identical in *outcome* but invisible in *process*; the
+screencast makes the process itself observable regardless of environment,
+which matters for a project whose whole premise is "don't just trust the
+agent, be able to see what it did."
+
+Two bugs surfaced and were fixed while building this: (1) the socket used
+to be closed before the final outcome could be sent over it, so the
+live-view page never learned where to redirect; (2) a stale client-side
+reference threw silently and aborted the redirect handler before it could
+run. Both are a reminder that a feature which "mostly works" in manual
+testing can still have its unhappy-path wiring broken — the fix for each
+was found only by tracing actual socket/DOM state, not by re-reading the
+code that looked correct.
 
 ## 04 — Data Model
 
@@ -173,9 +196,9 @@ Postgres (Neon) in production, SQLite locally, selected purely by whether `DATAB
 > - **External-service latency is unbudgeted risk.** A single `/checkout` load has been observed taking 15-20s (sequential Postgres round-trips + a live Razorpay order call); the full pay flow can run 50-90s. Timeouts are widened to absorb this, not to fix its cause.
 > - **No connection pooling.** `database.py` opens a fresh Postgres connection per call; every extra audit-event write is another network round trip.
 > - **Small/rate-limited LLMs are measurably less reliable** at the multi-step tool sequence checkout requires — mitigated with forced tool-choice and reply-overriding safeguards, not eliminated.
-> - **The "type into a visible browser" experience is local-only** by construction — CDP-attach to a developer's own Chrome has no cloud equivalent; hosted deployments fall back to headless with identical results but no visible typing.
 > - **No rate limiting or bot defense** on `/agent/chat` itself — the seven-check gate limits blast radius per transaction, not request volume.
 > - **Guest-account checkout** means auditability is per-session, not per-verified-identity — acceptable for a demo, not for a real deployment.
+> - **The live payment stream is unauthenticated by stream id alone.** Anyone who learns a `stream_id` (a client-generated UUID) can open `/ws/payment-stream/<id>` and watch those frames — low risk today since it's a random per-session value carrying no card data server-side, but it isn't scoped to the session that created it.
 
 ## 07 — Impact
 
@@ -200,6 +223,7 @@ In priority order, if this moved from demo toward production:
 3. Sanitize catalog text reaching the LLM's context; treat product data as untrusted input, not trusted system content.
 4. Short-lived, single-purpose session tokens for the automation handoff, scoped narrower than the user's full session cookie.
 5. Rate limiting and anomaly detection on `/agent/chat` independent of the per-transaction safety kernel.
+6. Scope `/ws/payment-stream/<id>` to the session that created it, instead of trusting possession of the id alone.
 
 ---
 

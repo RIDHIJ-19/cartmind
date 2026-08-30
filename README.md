@@ -8,11 +8,15 @@ it:
    — talk or type to search, add to cart, check out, and pay, all from
    inside the site itself. No login required (checkout auto-provisions a
    guest account). Supports voice input (mic button, transcribed with Groq
-   Whisper).
-2. **Local browser agent** (`agent/`) — a CLI/conversational loop that opens
-   its own real Chromium window and **types a TEST MODE card into the actual
-   Razorpay Checkout iframe live**, character by character, for a fully
-   visible local demo.
+   Whisper). When you hand over a card, it opens a dedicated **live payment
+   view** in the same tab — a real CDP screencast of the automation typing
+   your card into the actual Razorpay iframe, streamed over a WebSocket, so
+   you watch it happen even on a headless hosted deployment (see
+   [Screenshots](#screenshots) below).
+2. **Local browser agent** (`agent/`) — a separate CLI/conversational loop
+   that opens its own real Chromium window and **types a TEST MODE card
+   into the actual Razorpay Checkout iframe live**, character by character,
+   for a fully visible local demo outside the storefront.
 
 Underneath both sits a policy core — `mandate.py`, `gating.py`,
 `safety_kernel.py`, `database.py` — so a payment can only happen after
@@ -35,6 +39,10 @@ explicit confirmation, under a hard order-value cap, with every step
 **Chat widget** — search, add-to-cart, and checkout narrated conversationally:
 
 ![Chatbot](docs/screenshots/chatbot.png)
+
+**Live payment view** — a real CDP screencast of the automation typing the card into Razorpay's actual OTP-secured checkout, streamed live over a WebSocket, with a step checklist tracking progress:
+
+![Live payment view](docs/screenshots/live_view.png)
 
 **Owner console** — revenue, funnel, manual-vs-agent split, and the full payment ledger, computed live from the audit trail:
 
@@ -71,19 +79,27 @@ the checkout page and types into that iframe like a person would, then
 returns the real result (`captured`/`failed`) to the chat.
 
 - **Locally**, running `python storefront/app.py` also launches your own
-  Chrome with remote debugging enabled (`_launch_debug_browser`), so that
-  automation happens **visibly, in your own browser tab** — you can watch
-  the card get typed in real time. If no such browser is reachable, it
-  falls back to a fresh, maximized Chromium window instead.
+  Chrome with remote debugging enabled (`_launch_debug_browser`), so the
+  automation attaches to and types in **your own already-open browser tab**
+  instead of a separate process. If no such browser is reachable, it falls
+  back to a fresh, maximized Chromium window.
 - **On a hosted server** (Render, etc. — detected via the `RENDER` env var,
-  or set `CARTMIND_FORCE_HEADLESS=1` yourself), there's no local desktop for
-  a visible window to draw on, so it always runs a headless server-side
-  browser instead. The result is identical (a real captured payment, order
-  confirmation, cart clear) — you just don't see the typing happen, since
-  there's nothing to show it on.
+  or set `CARTMIND_FORCE_HEADLESS=1` yourself), there's no local desktop to
+  attach to, so it always runs its own headless server-side browser instead.
 
-Both paths return a step-by-step trail in the chat reply, and land you on
-`/order-confirmed` or `/order-failed` afterward.
+Either way, giving the chat a card navigates that same tab to a dedicated
+**live payment view** (`/live-view/<stream_id>`), which opens a WebSocket to
+`/ws/payment-stream/<id>` and renders a live CDP screencast (`Page.startScreencast`)
+of the automation actually typing into Razorpay's real iframe — a "browser
+window" mockup with a step checklist, not a raw video feed, so it reads as
+part of the site rather than a screen recording. This is what makes the
+typing **visible even on a fully headless hosted deployment**, not just
+locally. When the payment resolves, the server pushes a final result over
+that same socket, the live-view page redirects to the real
+`/order-confirmed` or `/order-failed` (with the actual order id/amount or
+failure reason — never a guess), and patches the chat widget's own stored
+history so reopening it shows the real outcome instead of being stuck on
+"Thinking…".
 
 ## Files
 
@@ -105,9 +121,12 @@ Both paths return a step-by-step trail in the chat reply, and land you on
 **Storefront**
 - `storefront/app.py` — Flask storefront: search / product / cart /
   checkout / order-confirmed / order-failed / owner console / the
-  `/agent/chat` and `/agent/transcribe` endpoints behind the chat widget
+  `/agent/chat` and `/agent/transcribe` endpoints behind the chat widget,
+  plus the `/ws/payment-stream/<id>` WebSocket (flask-sock) that relays the
+  live CDP screencast to the live payment view
 - `storefront/templates/`, `storefront/static/` — storefront pages and the
-  chat widget's JS/CSS (`templates/base.html`), plus product images
+  chat widget's JS/CSS (`templates/base.html`), plus product images;
+  `templates/live_view.html` is the standalone live payment view page
 - `agent/browser_agent.py` — Playwright wrapper (`BrowserAgent` class) plus
   the module-level, hardened `pay_with_card()` shared by the storefront's
   server-side automation, `agent.py`, and `cli.py`: handles Razorpay's
@@ -224,9 +243,12 @@ relying on a native build sandbox's `apt-get`) and a `render.yaml`.
    `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `DATABASE_URL`,
    `OWNER_PASSWORD`. (`STOREFRONT_SECRET` is auto-generated;
    `CARTMIND_FORCE_HEADLESS` is already set.)
-4. Deploy. Gunicorn is configured with a 120s worker timeout — real payment
-   automation (remote DB round-trips + a live Razorpay order + typing into
-   the iframe) can take 30-90s, which is normal, not a hang.
+4. Deploy. Gunicorn is configured with `--worker-class gevent` (required for
+   the `/ws/payment-stream/<id>` WebSocket to actually upgrade at all — sync
+   workers can't hijack the socket the way flask-sock needs) and a 120s
+   worker timeout — real payment automation (remote DB round-trips + a live
+   Razorpay order + typing into the iframe) can take 30-90s, which is
+   normal, not a hang.
 
 Without a Blueprint, the equivalent manual setup is: **New → Web Service →
 Docker**, same repo, same env vars.
