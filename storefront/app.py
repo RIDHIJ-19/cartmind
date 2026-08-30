@@ -1,9 +1,19 @@
 import json
+import mimetypes
 import os
 import re
 import sys
 from contextlib import contextmanager
 from pathlib import Path
+
+# Some minimal Docker base images ship an incomplete system MIME database,
+# so Werkzeug's static file serving falls back to a generic content-type
+# for .css/.js — which Chrome then refuses to apply as a stylesheet at all,
+# rendering the whole site as unstyled HTML even though every file loaded
+# fine. Register the mappings explicitly so this doesn't depend on the
+# host OS's /etc/mime.types being complete.
+mimetypes.add_type("text/css", ".css")
+mimetypes.add_type("application/javascript", ".js")
 
 from flask import Flask, jsonify, redirect, render_template, request, session, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
