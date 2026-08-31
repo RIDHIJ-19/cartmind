@@ -650,7 +650,16 @@ def _browser_page():
 
     with sync_playwright() as pw:
         if _ON_CLOUD_HOST:
-            browser = pw.chromium.launch(headless=True)
+            # Headless Chromium can hang (not crash — just never finish
+            # launching) inside a constrained container like Render's: the
+            # default sandbox needs privileges the container doesn't grant,
+            # and /dev/shm is too small for Chromium's default shared-memory
+            # usage. Both flags are the standard fix for this exact class of
+            # "stuck with no error" hang in Docker.
+            browser = pw.chromium.launch(
+                headless=True,
+                args=["--no-sandbox", "--disable-dev-shm-usage"],
+            )
             owns_browser = True
         else:
             try:
