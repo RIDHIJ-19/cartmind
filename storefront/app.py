@@ -703,6 +703,16 @@ def _browser_page():
                     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
                 )
+                # headless Chromium with no_viewport falls back to a small
+                # default window (~800x600). Razorpay treats that as a
+                # mobile/narrow screen and renders its collapsed "Payment
+                # Options" accordion (Cards/Netbanking/Wallet as closed rows)
+                # instead of the desktop layout with card fields shown
+                # directly — this is exactly the same behavior seen typing
+                # into it manually on a small window. Force a real desktop
+                # size so it always gets the desktop layout.
+                context_kwargs.pop("no_viewport", None)
+                context_kwargs["viewport"] = {"width": 1440, "height": 900}
             context = browser.new_context(**context_kwargs)
             if _ON_CLOUD_HOST:
                 context.add_init_script(
