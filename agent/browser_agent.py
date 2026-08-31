@@ -123,10 +123,14 @@ def open_razorpay_checkout(page):
     while time.monotonic() < deadline:
         if _modal_has_rendered(page):
             return
-        try:
-            page.click("#pay-button", timeout=4000)
-        except Exception as exc:
-            print(f"[pay_with_card] #pay-button click failed: {exc}", flush=True)
+        # Razorpay's checkout.js injects a background prefetch iframe (the
+        # same one the modal will later use) as soon as the page loads —
+        # it can sit on top of #pay-button and intercept its clicks before
+        # the modal itself ever opens, which a plain page.click() treats as
+        # a hard failure instead of retrying past it. safe_click() already
+        # handles exactly this (Escape, then a forced click).
+        if not safe_click(page, page.locator("#pay-button")):
+            print("[pay_with_card] #pay-button click failed even with force fallback", flush=True)
         page.wait_for_timeout(2500)
 
 
