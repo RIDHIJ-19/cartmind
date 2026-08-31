@@ -125,8 +125,8 @@ def open_razorpay_checkout(page):
             return
         try:
             page.click("#pay-button", timeout=4000)
-        except Exception:
-            pass
+        except Exception as exc:
+            print(f"[pay_with_card] #pay-button click failed: {exc}", flush=True)
         page.wait_for_timeout(2500)
 
 
@@ -160,10 +160,17 @@ def pay_with_card(page, card_number, expiry, cvv, phone="9876543219", otp="1234"
         return {"error": f"{type(exc).__name__}: {exc}"}
 
 
+def _log(msg):
+    print(f"[pay_with_card] {msg}", flush=True)
+
+
 def _pay_with_card(page, card_number, expiry, cvv, phone, otp):
+    _log("opening razorpay checkout modal")
     open_razorpay_checkout(page)
     if not _modal_has_rendered(page):
+        _log("modal never rendered after retrying pay button")
         return {"error": "Razorpay checkout modal did not render after retrying the pay button."}
+    _log("modal rendered")
     frame = rzp_frame(page)
 
     # The modal can land on a payment-METHOD picker (Cards / Netbanking /
@@ -175,6 +182,7 @@ def _pay_with_card(page, card_number, expiry, cvv, phone, otp):
             break
         cards_option = frame.get_by_text("Cards", exact=True)
         if cards_option.count() and cards_option.first.is_visible():
+            _log("clicking 'Cards' payment-method option")
             try:
                 cards_option.first.click(timeout=3000)
             except Exception:
@@ -198,12 +206,18 @@ def _pay_with_card(page, card_number, expiry, cvv, phone, otp):
     while time.monotonic() < overlay_deadline:
         overlay = frame.query_selector('[data-testid="contact-overlay-container"]')
         if not overlay or not overlay.is_visible():
+            _log("contact overlay cleared (or was never shown)")
             break
         contact_input = frame.query_selector('input[name="contact"]')
         if contact_input:
-            type_verified(page, frame, 'input[name="contact"]', phone)
-        click_submit(page, frame)
+            _log("typing phone into contact overlay")
+            ok = type_verified(page, frame, 'input[name="contact"]', phone)
+            _log(f"phone type_verified -> {ok}")
+        submitted = click_submit(page, frame)
+        _log(f"click_submit on contact overlay -> {submitted}")
         page.wait_for_timeout(1500)
+    else:
+        _log("contact overlay never cleared within 20s")
 
     # A leftover dropdown/overlay (e.g. the country-code picker) can still be
     # intercepting clicks. Escape clears Razorpay's overlay stack without
@@ -226,19 +240,23 @@ def _pay_with_card(page, card_number, expiry, cvv, phone, otp):
         ('input[name="card.expiry"]', expiry.replace("/", "")),
         ('input[name="card.cvv"]', cvv),
     ):
-        type_verified(page, frame, selector, value)
+        ok = type_verified(page, frame, selector, value)
+        _log(f"type_verified({selector}) -> {ok}")
 
     remaining_contact = frame.query_selector('input[name="contact"]')
     if remaining_contact and remaining_contact.is_visible() and not (remaining_contact.input_value() or ""):
+        _log("re-typing phone into a still-empty contact field after card fields")
         type_verified(page, frame, 'input[name="contact"]', phone)
 
-    click_submit(page, frame)
+    submitted = click_submit(page, frame)
+    _log(f"click_submit on card form -> {submitted}")
     page.wait_for_timeout(2500)
 
     # RBI tokenisation prompt ("Save your card as per RBI guidelines?") can
     # appear before the OTP step. Decline it so the flow keeps moving.
     maybe_later = frame.get_by_text("Maybe later", exact=True)
     if maybe_later.count() and maybe_later.first.is_visible():
+        _log("dismissing RBI 'save card' prompt")
         maybe_later.first.click()
         page.wait_for_timeout(1500)
 
@@ -251,11 +269,16 @@ def _pay_with_card(page, card_number, expiry, cvv, phone, otp):
         page.wait_for_timeout(1000)
 
     if otp_input:
+        _log("OTP field appeared, typing test OTP")
         type_verified(page, frame, 'input[placeholder*="OTP" i], input[name*="otp" i]', otp)
         click_submit(page, frame)
         page.wait_for_timeout(2500)
+    else:
+        _log("no OTP field appeared within 8s")
 
-    return read_checkout_status(page, poll=True)
+    result = read_checkout_status(page, poll=True)
+    _log(f"final checkout status -> {result}")
+    return result
 
 
 def login_or_signup(page, base_url, email, password, name=""):
