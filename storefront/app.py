@@ -881,7 +881,20 @@ def agent_chat():
         return jsonify({"error": "message is required"}), 400
 
     client = Groq()
-    messages = [{"role": "system", "content": AGENT_SYSTEM_PROMPT}] + history + [{"role": "user", "content": user_message}]
+    # `history` includes every prior tool-call result verbatim (full catalog
+    # search payloads, cart snapshots, etc.), so an unbounded history resends
+    # the whole conversation's accumulated JSON on every single turn — this
+    # is what was actually burning through the daily token quota, not any
+    # one request. A rolling window keeps enough context for follow-ups
+    # ("the black one", "yes proceed") without that unbounded growth.
+    trimmed_history = history[-16:]
+    # Slicing can land mid-turn, splitting an assistant tool_calls message
+    # from its tool-role responses (or vice versa) — Groq/OpenAI reject a
+    # request where those don't pair up. Trim forward to the next "user"
+    # message so every kept turn is complete.
+    while trimmed_history and trimmed_history[0].get("role") != "user":
+        trimmed_history.pop(0)
+    messages = [{"role": "system", "content": AGENT_SYSTEM_PROMPT}] + trimmed_history + [{"role": "user", "content": user_message}]
 
     # These small Groq models will sometimes just say "payment captured" (or
     # let the client's canned "opening payment window" text stand in) as
