@@ -101,6 +101,16 @@ failure reason — never a guess), and patches the chat widget's own stored
 history so reopening it shows the real outcome instead of being stuck on
 "Thinking…".
 
+Confirmed end-to-end on a real headless Render deployment — getting there
+took six separate fixes for things that only ever surface in a container
+(sandboxing, a Playwright/Docker-image version mismatch, a gunicorn worker
+class that silently broke Playwright's sync API, Razorpay's own bot
+detection blocking headless traffic outright, a prefetch iframe intercepting
+the pay button's click, and a too-small default headless window making
+Razorpay render its mobile layout instead of the desktop card form). See
+[DESIGN.md §3.5](DESIGN.md#35--making-headless-chromium-actually-pass-as-a-real-browser)
+for the full list if you're hitting something similar.
+
 ## Files
 
 **Shared core**
@@ -243,12 +253,16 @@ relying on a native build sandbox's `apt-get`) and a `render.yaml`.
    `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `DATABASE_URL`,
    `OWNER_PASSWORD`. (`STOREFRONT_SECRET` is auto-generated;
    `CARTMIND_FORCE_HEADLESS` is already set.)
-4. Deploy. Gunicorn is configured with `--worker-class gevent` (required for
-   the `/ws/payment-stream/<id>` WebSocket to actually upgrade at all — sync
-   workers can't hijack the socket the way flask-sock needs) and a 120s
-   worker timeout — real payment automation (remote DB round-trips + a live
-   Razorpay order + typing into the iframe) can take 30-90s, which is
-   normal, not a hang.
+4. Deploy. Gunicorn is configured with `--worker-class gthread --threads 8`
+   (real OS threads, needed both for the `/ws/payment-stream/<id>` WebSocket
+   to upgrade and for Playwright's sync API to work at all — the `gevent`
+   worker class monkey-patches the whole process, which makes Playwright
+   misdetect a running asyncio loop and refuse to launch the browser), a
+   120s worker timeout (real payment automation — remote DB round-trips + a
+   live Razorpay order + typing into the iframe — can take 30-90s, which is
+   normal, not a hang), and `--access-logfile - --error-logfile -` so
+   request/error logs actually reach Render's log stream instead of being
+   silently dropped.
 
 Without a Blueprint, the equivalent manual setup is: **New → Web Service →
 Docker**, same repo, same env vars.

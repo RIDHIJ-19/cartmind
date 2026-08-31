@@ -163,6 +163,28 @@ testing can still have its unhappy-path wiring broken — the fix for each
 was found only by tracing actual socket/DOM state, not by re-reading the
 code that looked correct.
 
+### 3.5 — Making headless Chromium actually pass as a real browser
+
+Getting the automation working locally (a visible, headed browser) said
+nothing about whether it would work headless on a real host — it didn't,
+until five separate, compounding issues were fixed. Each masked the next:
+fixing one just exposed the next failure mode further into the flow.
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| 1 | Browser launch hung forever, no error | Chromium's sandbox needs privileges the container doesn't grant; `/dev/shm` too small | `--no-sandbox --disable-dev-shm-usage` |
+| 2 | `Executable doesn't exist` at launch | `playwright` pip package version drifted ahead of the Docker base image's bundled Chromium build | Pin `playwright==1.49.0` to match the base image exactly |
+| 3 | `Playwright Sync API inside the asyncio loop` | gunicorn's `gevent` worker monkey-patches the whole process (threading/socket/subprocess), which Playwright's sync API misreads as a running event loop | Switched gunicorn to `gthread` workers — real OS threads, no monkey-patching, and flask-sock's WebSocket hijack works fine with them too |
+| 4 | Modal never rendered, no exception | Razorpay's own bot/fraud detection silently refusing headless traffic (`navigator.webdriver`, a `HeadlessChrome` user-agent string) | `--headless=new` + `--disable-blink-features=AutomationControlled`, a realistic desktop user-agent, and an init script forcing `navigator.webdriver` to `undefined` |
+| 5 | Pay button click always failed, "intercepted" | Razorpay's own background prefetch iframe sat on top of the button before the modal opened | Reused the existing `safe_click()` helper (Escape, then a forced click) instead of a plain `page.click()` |
+| 6 | Card fields never got typed into (only the phone number landed) | Headless Chromium's default window is small; Razorpay treats that as a mobile viewport and renders its collapsed "Payment Options" accordion instead of the desktop form with fields shown directly | Forced a real desktop `viewport` (1440×900) on the headless context instead of `no_viewport=True` |
+
+None of these were visible from reading the code — each was only found by
+adding step-by-step logging to the actual automation (`print(..., flush=True)`
+at every stage) and reading real production logs, plus turning on gunicorn's
+own access log (`--access-logfile -`), which had been silently off by
+default and made it look like requests weren't reaching the server at all.
+
 ## 04 — Data Model
 
 One append-friendly events table for narration, one payments table as the ledger of record.
