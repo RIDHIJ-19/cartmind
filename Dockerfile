@@ -20,4 +20,8 @@ WORKDIR /app/storefront
 # all ("It looks like you are using Playwright Sync API inside the asyncio
 # loop"). gthread avoids that entirely and still lets flask-sock hijack a
 # WebSocket connection's socket without blocking the other threads.
-CMD gunicorn app:app --bind 0.0.0.0:${PORT} --worker-class gthread --workers 2 --threads 8 --timeout 120
+# --access-logfile/--error-logfile '-' send both to stdout/stderr (Render's
+# log stream) — without this, gunicorn logs no HTTP access lines at all,
+# which made it impossible to tell whether a request even reached the
+# server versus failing before it got here.
+CMD gunicorn app:app --bind 0.0.0.0:${PORT} --worker-class gthread --workers 2 --threads 8 --timeout 120 --access-logfile - --error-logfile -

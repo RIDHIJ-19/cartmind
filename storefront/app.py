@@ -51,12 +51,13 @@ PAYMENT_STREAMS = {}
 
 @sock.route("/ws/payment-stream/<stream_id>")
 def payment_stream(ws, stream_id):
+    print(f"[payment_stream] connected stream_id={stream_id}", flush=True)
     PAYMENT_STREAMS.setdefault(stream_id, []).append(ws)
     try:
         while True:
             ws.receive(timeout=30)  # None on timeout — just keeps the handler (and socket) alive
-    except Exception:
-        pass  # client disconnected — ConnectionClosed or similar
+    except Exception as exc:
+        print(f"[payment_stream] disconnected stream_id={stream_id}: {exc}", flush=True)
     finally:
         if ws in PAYMENT_STREAMS.get(stream_id, []):
             PAYMENT_STREAMS[stream_id].remove(ws)
@@ -593,12 +594,23 @@ def agent_dispatch(name, tool_input, stream_id=None):
         return _run_visible_login(email, password, name_field), None
 
     if name == "pay_with_test_card":
+        print(f"[agent_dispatch] pay_with_test_card called, stream_id={stream_id}", flush=True)
         card_number = (tool_input.get("card_number") or DEFAULT_CARD["card_number"]).replace(" ", "")
         if card_number in KNOWN_BAD_CARDS:
             card_number = DEFAULT_CARD["card_number"]
         expiry = tool_input.get("expiry") or DEFAULT_CARD["expiry"]
         cvv = tool_input.get("cvv") or DEFAULT_CARD["cvv"]
-        result = _run_test_payment(card_number, expiry, cvv, stream_id=stream_id)
+        try:
+            result = _run_test_payment(card_number, expiry, cvv, stream_id=stream_id)
+        except Exception as exc:
+            import traceback
+            print(f"[agent_dispatch] _run_test_payment raised: {exc}", flush=True)
+            traceback.print_exc()
+            if stream_id:
+                _broadcast_done(stream_id, {"status": "failed", "navigate": f"/order-failed?reason={exc}", "summary": f"Payment failed — {exc}"})
+                _close_stream(stream_id)
+            return {"error": str(exc), "payment_status": "failed"}, f"/order-failed?reason={exc}"
+        print(f"[agent_dispatch] _run_test_payment returned: {result}", flush=True)
         if isinstance(result, dict) and result.get("status") == "captured":
             session["cart"] = {}
             result["cart_count"] = 0
@@ -893,7 +905,9 @@ def agent_transcribe():
 
 @app.route("/agent/chat", methods=["POST"])
 def agent_chat():
+    print("[agent_chat] request received", flush=True)
     if not os.getenv("GROQ_API_KEY"):
+        print("[agent_chat] GROQ_API_KEY missing", flush=True)
         return jsonify({"reply": "Voice/chat assistant is unavailable: GROQ_API_KEY is not configured.", "navigate": None, "cart_count": None}), 503
 
     from groq import Groq
@@ -902,6 +916,7 @@ def agent_chat():
     user_message = payload.get("message", "").strip()
     history = payload.get("history", [])
     stream_id = payload.get("stream_id")
+    print(f"[agent_chat] message={user_message!r} stream_id={stream_id}", flush=True)
     if not user_message:
         return jsonify({"error": "message is required"}), 400
 
