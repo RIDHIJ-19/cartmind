@@ -187,7 +187,15 @@ def _pay_with_card(page, card_number, expiry, cvv, phone, otp):
     # the card form is interactive, and sometimes shows the card form
     # directly. is_visible() alone can't tell (covered inputs still report
     # visible), so check for the overlay explicitly.
-    for _ in range(3):
+    # On a hosted/headless box the network hop to Razorpay's API (and the
+    # overlay's own re-render after submitting the contact step) can take
+    # noticeably longer than on a local machine — 3 quick tries wasn't
+    # enough there and left the card fields still covered by the overlay,
+    # so the type_verified() calls below silently found nothing visible to
+    # type into (this is what "only entered the phone number" looked like).
+    # Budget real wall-clock time instead of a small fixed attempt count.
+    overlay_deadline = time.monotonic() + 20
+    while time.monotonic() < overlay_deadline:
         overlay = frame.query_selector('[data-testid="contact-overlay-container"]')
         if not overlay or not overlay.is_visible():
             break
@@ -208,7 +216,7 @@ def _pay_with_card(page, card_number, expiry, cvv, phone, otp):
     # iframe can still be re-rendering, which is exactly when a type() call
     # loses characters partway through.
     try:
-        frame.locator('input[name="card.number"]').wait_for(state="visible", timeout=8000)
+        frame.locator('input[name="card.number"]').wait_for(state="visible", timeout=15000)
     except Exception:
         pass
     page.wait_for_timeout(500)
