@@ -14,7 +14,10 @@ ENV PORT=10000
 EXPOSE 10000
 
 WORKDIR /app/storefront
-# gevent worker class is required for the live payment-stream WebSocket
-# (/ws/payment-stream/<id>) to actually upgrade under gunicorn — sync/
-# threaded workers can't hijack the socket the way flask-sock needs.
-CMD gunicorn app:app --bind 0.0.0.0:${PORT} --worker-class gevent --workers 2 --timeout 120
+# gthread (real OS threads), not gevent: gevent's worker monkey-patches the
+# whole process (threading/socket/subprocess), which makes Playwright's sync
+# API misdetect a running asyncio loop and refuse to launch the browser at
+# all ("It looks like you are using Playwright Sync API inside the asyncio
+# loop"). gthread avoids that entirely and still lets flask-sock hijack a
+# WebSocket connection's socket without blocking the other threads.
+CMD gunicorn app:app --bind 0.0.0.0:${PORT} --worker-class gthread --workers 2 --threads 8 --timeout 120
