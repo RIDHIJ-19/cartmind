@@ -656,9 +656,21 @@ def _browser_page():
             # and /dev/shm is too small for Chromium's default shared-memory
             # usage. Both flags are the standard fix for this exact class of
             # "stuck with no error" hang in Docker.
+            # "--headless=new" plus disabling the automation-controlled blink
+            # feature keeps navigator.webdriver off and the modern headless
+            # rendering path (vs. legacy headless, whose old-style UA string
+            # payment gateways commonly bot-block on) — Razorpay's own
+            # checkout modal was silently refusing to render at all under
+            # plain headless=True, consistent with fraud/bot detection
+            # rather than any timing or selector issue.
             browser = pw.chromium.launch(
                 headless=True,
-                args=["--no-sandbox", "--disable-dev-shm-usage"],
+                args=[
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--headless=new",
+                    "--disable-blink-features=AutomationControlled",
+                ],
             )
             owns_browser = True
         else:
@@ -670,7 +682,20 @@ def _browser_page():
                 owns_browser = True
 
         if owns_browser:
-            context = browser.new_context(no_viewport=True)
+            context_kwargs = {"no_viewport": True}
+            if _ON_CLOUD_HOST:
+                # A realistic desktop UA (no "HeadlessChrome") so Razorpay's
+                # own fraud/bot checks don't see an obvious automation
+                # fingerprint before the checkout modal even opens.
+                context_kwargs["user_agent"] = (
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+                )
+            context = browser.new_context(**context_kwargs)
+            if _ON_CLOUD_HOST:
+                context.add_init_script(
+                    "Object.defineProperty(navigator, 'webdriver', {get: () => undefined});"
+                )
             if session_cookie:
                 context.add_cookies([{"name": cookie_name, "value": session_cookie, "url": base_url}])
             page = context.new_page()
