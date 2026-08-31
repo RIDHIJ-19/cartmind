@@ -25,6 +25,10 @@ explicit confirmation, under a hard order-value cap, with every step
 
 📐 **[Design doc](DESIGN.md)** — full system architecture (HLD/LLD), sequence diagrams, security model, known limitations, and business impact.
 
+## Live demo
+
+**[cartmind-vw0v.onrender.com](https://cartmind-vw0v.onrender.com)** — hosted on Render, running the same headless payment automation described below. Owner console: `/owner`, password `owner123`.
+
 ## Screenshots
 
 | | |
