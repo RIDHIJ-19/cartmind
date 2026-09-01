@@ -98,6 +98,29 @@
     margin-top: 2.2rem;
   }
 
+  /* Title slide */
+  .title-slide { align-items: center; text-align: center; }
+  .title-mark { font-size: 3rem; margin-bottom: 1.2rem; }
+  .title-name {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2rem, 4.5vw, 3.4rem);
+    max-width: none;
+    margin: 0 0 1.6rem 0;
+  }
+  .title-author {
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: var(--ink);
+  }
+  .title-email {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.95rem;
+    color: var(--muted);
+    margin-top: 0.4rem;
+  }
+
   /* Slide 2/3 — stat grid */
   .grid {
     display: grid;
@@ -265,7 +288,14 @@
 
 <div class="deck" id="deck">
 
-  <section class="slide active" data-title="Hook">
+  <section class="slide active title-slide" data-title="Title">
+    <div class="title-mark">🛒</div>
+    <h1 class="title-name">CartMind <span class="accent">—</span> E-commerce Agent</h1>
+    <div class="title-author">Ridhi Jaggi</div>
+    <div class="title-email">jaggiridhi2003@gmail.com</div>
+  </section>
+
+  <section class="slide" data-title="Hook">
     <div class="eyebrow">CartMind</div>
     <h1>Would you let an AI spend your money <span class="accent">unsupervised?</span></h1>
     <p class="lede">Most people's answer is no — not because agents can't shop, but because nothing stops them from getting it wrong, and no one can prove what happened after.</p>
@@ -346,7 +376,7 @@
 
   <section class="slide" data-title="Why a Replica">
     <div class="eyebrow">A Deliberate Constraint</div>
-    <h2>Why a replica storefront, not Amazon or Flipkart</h2>
+    <h2>Why a replica storefront, not a real e-commerce website</h2>
     <p class="lede">Real commercial platforms actively block automated checkout — bot detection, CAPTCHAs, and auth flows built to stop exactly this kind of traffic. There's no way to test an AI shopping agent's full pipeline against them safely or reliably.</p>
     <p class="lede">So CartMind ships its own faithful storefront instead — real catalog, real cart, real Razorpay TEST checkout — so the entire agent pipeline can be demonstrated end to end, without fighting someone else's fraud defenses to do it.</p>
   </section>
@@ -379,7 +409,7 @@
 </div>
 
 <div class="chrome">
-  <span class="slide-index" id="slideIndex">01 / 09</span>
+  <span class="slide-index" id="slideIndex">01 / 11</span>
   <div class="dots" id="dots"></div>
 </div>
 <div class="hint">← → to navigate</div>
