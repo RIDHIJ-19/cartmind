@@ -310,6 +310,21 @@
     </div>
   </section>
 
+  <section class="slide" data-title="Seven Checks">
+    <div class="eyebrow">The Safety Kernel</div>
+    <h2>Seven checks, every payment, no exceptions</h2>
+    <div class="checks">
+      <div class="check"><span class="tick">1</span><span><b>Authorization</b><span class="rest"> — explicitly confirmed, for this exact amount</span></span></div>
+      <div class="check"><span class="tick">2</span><span><b>Amount</b><span class="rest"> — matches the backend's own recalculated cart total</span></span></div>
+      <div class="check"><span class="tick">3</span><span><b>Transaction limit</b><span class="rest"> — under the hard per-order spend cap</span></span></div>
+      <div class="check"><span class="tick">4</span><span><b>Quantity limit</b><span class="rest"> — under the max items per order</span></span></div>
+      <div class="check"><span class="tick">5</span><span><b>Discount limit</b><span class="rest"> — any discount is within the allowed max</span></span></div>
+      <div class="check"><span class="tick">6</span><span><b>Rate limit</b><span class="rest"> — not too many attempts in the last minute</span></span></div>
+      <div class="check"><span class="tick">7</span><span><b>Duplicate check</b><span class="rest"> — no successful payment already exists for this transaction</span></span></div>
+    </div>
+    <p class="lede" style="margin-top:1.2rem">Any single failure blocks the payment before Razorpay is ever touched — the failing check's name and reason go straight into the audit trail.</p>
+  </section>
+
   <section class="slide" data-title="The Agent">
     <div class="eyebrow">What We Built</div>
     <h2>One agent, the full shopping pipeline</h2>
