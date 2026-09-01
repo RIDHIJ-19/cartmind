@@ -23,7 +23,7 @@ Underneath both sits a policy core — `mandate.py`, `gating.py`,
 explicit confirmation, under a hard order-value cap, with every step
 (allowed or blocked) written to an auditable trail.
 
-📐 **[Design doc](DESIGN.md)** — full system architecture (HLD/LLD), sequence diagrams, security model, known limitations, and business impact.
+📐 Full system architecture (HLD/LLD), sequence diagrams, security model, known limitations, and business impact — see [Architecture & Design](#architecture--design) below.
 
 ## Live demo
 
@@ -51,6 +51,218 @@ explicit confirmation, under a hard order-value cap, with every step
 **Owner console** — revenue, funnel, manual-vs-agent split, and the full payment ledger, computed live from the audit trail:
 
 ![Owner dashboard](docs/screenshots/owner.png)
+
+## Architecture & Design
+
+*Razorpay TEST MODE only · no path in this repository can move real money.*
+
+### Purpose & problem statement
+
+Agentic commerce needs a demonstrable answer to one question: can an AI be
+trusted to spend money on a person's behalf, and can every decision it made
+be reconstructed afterward?
+
+- Conversational commerce is moving from "recommend" to "transact" — an
+  agent that can search, decide, and pay changes the trust surface of a
+  storefront.
+- CartMind is a reference implementation of the guardrails that make that
+  surface acceptable: hard spend caps, category blocks, explicit
+  confirmation, and a seven-check gate in front of every money-moving write.
+- It exists to answer three questions concretely, not hypothetically: what
+  can the agent do unsupervised, what can it never do, and how would an
+  auditor prove that after the fact.
+- The build borrows AP2's separation of intent / cart / payment mandates,
+  simplified to plain structured objects for a demo rather than signed
+  verifiable credentials.
+
+### High-level design
+
+Three planes: a storefront the agent and a human share, a policy core
+neither can bypass, and an external payment rail treated as untrusted until
+verified.
+
+![Three Planes Architecture](docs/diagrams/architecture.png)
+
+*Fig. 1 — Component view. The policy core sits between every route and Razorpay; the agent has no path that skips it. `Allowed`/`blocked` flows out of the safety kernel are the two only ways a tool call can end.*
+
+<details>
+<summary>Fig. 1b — textual/mermaid version, including the live payment view (not pictured above)</summary>
+
+```mermaid
+graph TB
+  subgraph Client["Client surface"]
+    Human["Human shopper<br/>(manual clicks)"]
+    Widget["Chat widget<br/>text + voice"]
+  end
+
+  subgraph Storefront["Flask storefront"]
+    Routes["Catalog / cart / checkout routes"]
+    ChatAPI["/agent/chat + /agent/transcribe"]
+    Tools["Tool dispatch<br/>search · add_to_cart · go_to_checkout · pay_with_test_card"]
+    WS["/ws/payment-stream/id<br/>flask-sock"]
+    LiveView["/live-view/id page"]
+  end
+
+  subgraph Policy["Policy core (in-process, always-on)"]
+    Mandate["mandate.py<br/>intent / cart / payment objects"]
+    Gating["gating.py<br/>cap + category + confirmation"]
+    Kernel["safety_kernel.py<br/>7-check deterministic gate"]
+  end
+
+  subgraph External["External / untrusted"]
+    LLM["Groq LLM<br/>tool-calling"]
+    Browser["Playwright browser<br/>types into the real iframe"]
+    Razorpay["Razorpay TEST API<br/>+ Checkout iframe"]
+    DB[("Postgres / SQLite<br/>audit trail + ledger")]
+  end
+
+  Human --> Routes
+  Widget --> ChatAPI --> LLM
+  LLM -- tool call --> Tools
+  Tools --> Routes
+  Tools --> Browser --> Razorpay
+  Browser -- CDP screencast --> WS
+  Widget --> LiveView --> WS
+  Routes --> Mandate --> Gating --> Kernel
+  Kernel -- allowed --> Razorpay
+  Kernel -- blocked --> ChatAPI
+  Razorpay -- webhook-style verify --> Routes
+  Routes --> DB
+  Routes --> ChatAPI
+```
+
+</details>
+
+**Design decisions**
+
+- **Single storefront, two front doors.** A human clicking buttons and an
+  LLM calling tools both terminate in the same Flask routes and the same
+  gating code — there is deliberately no separate "agent API" with looser
+  rules.
+- **The LLM never touches money directly.** It can only request a named
+  tool call; the server decides whether that call is allowed to run,
+  independent of what the model claims.
+- **Payment automation is a browser, not an API shortcut.** Razorpay's card
+  fields live in a cross-origin iframe by design (PCI scope); the agent
+  drives a real Playwright browser rather than being handed a way around
+  that isolation.
+- **Every checkout is channel-tagged** (`manual` / `agent`) at creation
+  time, so the owner console's split is measured, not inferred.
+
+### Low-level design
+
+**Conversational tool loop** — each chat turn runs a bounded loop (max 4
+rounds) against the LLM with a fixed tool schema. The model chooses zero or
+more tools per round; the server executes them and feeds results back
+before the next round.
+
+- `search_catalog` → free-text + color/type/price filter over the catalog.
+- `view_product` → forces a product-page view before `add_to_cart`.
+- `go_to_checkout` → runs the full gate and returns `blocked`/`allowed`
+  plus the real order id — never a guess.
+- `pay_with_test_card` → the only tool that can move money; requires card
+  details already present in the conversation, never silently defaulted.
+
+> **Reliability note** — Smaller/rate-limited models occasionally narrate a fake success without calling the payment tool. The server treats the model as untrusted here too: a regex detects card-like input or a bare confirmation after a proposed card, forces `tool_choice` to the payment tool, and overwrites any reply claiming success if the tool was never actually invoked that turn.
+
+```mermaid
+sequenceDiagram
+  participant U as Shopper (chat)
+  participant S as Flask /agent/chat
+  participant G as Gating + Safety Kernel
+  participant B as Playwright browser
+  participant R as Razorpay
+
+  U->>S: "checkout"
+  S->>G: create_cart_mandate + check_cart_against_policy
+  G-->>S: allowed / blocked + reason
+  alt blocked
+    S-->>U: plain-language reason, no retry
+  else allowed
+    S->>G: safety_kernel.check_payment (7 checks)
+    G-->>S: allowed + real order_id
+    S-->>U: order id + amount, asks for card
+    U->>S: card number, expiry, cvv
+    S->>B: open /checkout, drive real iframe
+    B->>R: type card, submit
+    R-->>B: captured / failed
+    B-->>S: status + step trail
+    S->>S: clear cart, tag order captured
+    S-->>U: reply + toast + redirect to /order-confirmed
+  end
+```
+
+*Fig. 2 — A blocked cart never reaches Razorpay; a captured payment always reuses the order id already shown to the user.*
+
+**Order-identity guarantee** — an earlier revision created a fresh Razorpay
+order on every `/checkout` load, including the automation's own internal
+reload before typing the card — so the order id shown to the shopper could
+silently diverge from the one actually charged. Fixed by reusing any
+existing `status="created"` order for the same user + amount, refreshing
+its stored item snapshot on reuse so catalog changes (e.g. images) don't
+freeze stale.
+
+### Data model
+
+One append-friendly events table for narration, one payments table as the ledger of record.
+
+| Table | Key columns | Purpose |
+|---|---|---|
+| `audit_events` | `event_type, action, status, amount_inr, details_json` | Timestamped narration of every gate decision — allowed or blocked, with the plain-English reason |
+| `payments` | `order_id, status, amount_inr, channel, transaction_id, user_id` | Ledger of record; `status` transitions created → captured/failed; `channel` is manual/agent |
+| `users` | `email, password_hash, name` | Includes an auto-provisioned guest account so checkout never hard-requires signup |
+
+Postgres (Neon) in production, SQLite locally, selected purely by whether `DATABASE_URL` is set — no code branches on environment beyond that.
+
+### Security model
+
+> **Enforced today**
+> - **Iframe isolation is load-bearing, not incidental.** Razorpay's card fields are never reachable from page or agent JavaScript — the only way to fill them is real OS-level input via Playwright, which is also why a card can never be silently auto-submitted by a hallucinating model without a real browser action happening.
+> - **Two independent gates, not one.** `gating.py`'s cart-level policy and `safety_kernel.py`'s seven-check payment gate are separate code paths; a bug in one doesn't disable the other.
+> - **Seven checks, each falsifiable in isolation:** authorization match, recalculated-amount match, transaction limit, quantity limit, discount limit, rate limit, duplicate-payment check — every pass/fail carries a plain-English reason into the audit trail.
+> - **No implicit spend.** `pay_with_test_card` requires card details already present in the conversation this turn; the system prompt and a server-side forced-tool-call check both refuse to default to a stored card silently.
+> - **TEST MODE is structurally enforced.** `razorpay_service.py` rejects `rzp_live_` keys outright — there is no code path in this repo that can move real money.
+
+**Threat notes specific to an LLM-driven checkout**
+
+- **Prompt injection via product data.** Catalog text (names, descriptions) flows into the model's context; nothing in it is currently sanitized against instruction-like content. Low blast radius today because the model still can't call the payment tool without a real card appearing in the conversation.
+- **Model narration vs. ground truth.** The model's own claims are never trusted for anything money-related — the server verifies tool calls happened and reads results from real HTTP responses, not from the model's prose.
+- **Session-cookie handoff to automation.** The Playwright browser is handed the requester's session cookie so it acts as that user; this is safe within a single trusted server process but would need scoping (short-lived, single-use tokens) before this pattern is exposed multi-tenant.
+
+### Limitations
+
+> **Known, accepted for a demo**
+> - **External-service latency is unbudgeted risk.** A single `/checkout` load has been observed taking 15-20s (sequential Postgres round-trips + a live Razorpay order call); the full pay flow can run 50-90s. Timeouts are widened to absorb this, not to fix its cause.
+> - **No connection pooling.** `database.py` opens a fresh Postgres connection per call; every extra audit-event write is another network round trip.
+> - **Small/rate-limited LLMs are measurably less reliable** at the multi-step tool sequence checkout requires — mitigated with forced tool-choice and reply-overriding safeguards, not eliminated.
+> - **No rate limiting or bot defense** on `/agent/chat` itself — the seven-check gate limits blast radius per transaction, not request volume.
+> - **Guest-account checkout** means auditability is per-session, not per-verified-identity — acceptable for a demo, not for a real deployment.
+> - **The live payment stream is unauthenticated by stream id alone.** Anyone who learns a `stream_id` (a client-generated UUID) can open `/ws/payment-stream/<id>` and watch those frames — low risk today since it's a random per-session value carrying no card data server-side, but it isn't scoped to the session that created it.
+
+### Impact
+
+> **What this demonstrates**
+> - **A concrete trust boundary for agentic spend.** Rather than arguing in the abstract that an AI agent "can be made safe," CartMind shows the exact mechanism: a deterministic, falsifiable gate the agent cannot talk its way around.
+> - **Auditability as a first-class output, not an afterthought.** Every blocked attempt and every captured payment is reconstructable from `/trail` and the owner console — the same data a real compliance review would ask for.
+> - **A reusable pattern, not a one-off script.** The gating/kernel/mandate split is portable to any storefront; the browser-automation layer is portable to any PCI-scoped checkout that similarly isolates card entry in an iframe.
+> - **Operational visibility a business would actually use.** The owner console's manual-vs-agent split, funnel, and blocked-attempt ledger turn "is the agent behaving" from a qualitative worry into three numbers on a dashboard.
+
+| Metric surfaced | Where | Why it matters |
+|---|---|---|
+| Checkout funnel (attempts → cart-policy → kernel → captured) | Owner console | Shows exactly which gate is rejecting traffic, not just a pass/fail total |
+| Manual vs. agent capture rate | Owner console | Confirms the agent is held to the same bar as a human, not a looser one |
+| Blocked-attempt ledger with reason | Owner console + `/trail` | Turns "the agent tried something risky" into a reviewable, timestamped record |
+
+### Hardening roadmap
+
+In priority order, if this moved from demo toward production:
+
+1. Connection pooling for the audit/payments database — removes the single largest source of unbudgeted latency.
+2. Real user authentication in place of guest-account checkout, so audit records tie to a verified identity.
+3. Sanitize catalog text reaching the LLM's context; treat product data as untrusted input, not trusted system content.
+4. Short-lived, single-purpose session tokens for the automation handoff, scoped narrower than the user's full session cookie.
+5. Rate limiting and anomaly detection on `/agent/chat` independent of the per-transaction safety kernel.
+6. Scope `/ws/payment-stream/<id>` to the session that created it, instead of trusting possession of the id alone.
 
 ## Design notes
 
@@ -106,14 +318,18 @@ history so reopening it shows the real outcome instead of being stuck on
 "Thinking…".
 
 Confirmed end-to-end on a real headless Render deployment — getting there
-took six separate fixes for things that only ever surface in a container
-(sandboxing, a Playwright/Docker-image version mismatch, a gunicorn worker
-class that silently broke Playwright's sync API, Razorpay's own bot
-detection blocking headless traffic outright, a prefetch iframe intercepting
-the pay button's click, and a too-small default headless window making
-Razorpay render its mobile layout instead of the desktop card form). See
-[DESIGN.md §3.5](DESIGN.md#35--making-headless-chromium-actually-pass-as-a-real-browser)
-for the full list if you're hitting something similar.
+took six separate, compounding fixes for things that only ever surface in a
+container. Each one masked the next, only found by adding step-by-step
+logging to the actual automation and reading real production logs:
+
+| # | Symptom | Root cause | Fix |
+|---|---|---|---|
+| 1 | Browser launch hung forever, no error | Chromium's sandbox needs privileges the container doesn't grant; `/dev/shm` too small | `--no-sandbox --disable-dev-shm-usage` |
+| 2 | `Executable doesn't exist` at launch | `playwright` pip package version drifted ahead of the Docker base image's bundled Chromium build | Pin `playwright==1.49.0` to match the base image exactly |
+| 3 | `Playwright Sync API inside the asyncio loop` | gunicorn's `gevent` worker monkey-patches the whole process, which Playwright's sync API misreads as a running event loop | Switched gunicorn to `gthread` workers — real OS threads, no monkey-patching |
+| 4 | Modal never rendered, no exception | Razorpay's own bot/fraud detection silently refusing headless traffic (`navigator.webdriver`, a `HeadlessChrome` user-agent string) | `--headless=new` + `--disable-blink-features=AutomationControlled`, a realistic desktop user-agent, and an init script forcing `navigator.webdriver` to `undefined` |
+| 5 | Pay button click always failed, "intercepted" | Razorpay's own background prefetch iframe sat on top of the button before the modal opened | Reused the existing `safe_click()` helper (Escape, then a forced click) instead of a plain `page.click()` |
+| 6 | Card fields never got typed into (only the phone number landed) | Headless Chromium's default window is small; Razorpay renders its mobile "Payment Options" accordion instead of the desktop form | Forced a real desktop `viewport` (1440×900) on the headless context instead of `no_viewport=True` |
 
 ## Files
 
