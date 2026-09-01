@@ -1,4 +1,32 @@
-# CartMind — Demo Video Script (~2:30)
+# CartMind — Demo Video Script (~3:30)
+
+Two parts: a cinematic AI-generated vision intro (~1:30), then the real
+product demo (~2:00, screenshot-driven — see below).
+
+## Part 1 — Cinematic vision intro (0:00–1:30)
+
+Seven short AI-generated clips (8–12s each), abstract visuals only — no
+literal UI or readable text inside the generated footage itself (video
+generators distort both); all real text/branding/voiceover added afterward
+in an editor. Total generated footage ≈83s + title cards ≈1:30.
+
+| # | Time | Clip (generate) | Voiceover / overlay |
+|---|---|---|---|
+| 1 | 0:00–0:10 | Fragmented online shopping: scrolling, tabs, filters, abandoned carts, a failed payment icon | "Online commerce is faster than ever. But finding what you want is still complicated — and every transaction tells a story nobody's reading." |
+| 2 | 0:10–0:22 | Voice waves forming near a dark futuristic interface; the waves resolve into soft shapes | "What if commerce could simply understand you?" |
+| 3 | 0:22–0:34 | Voice waves morphing into abstract product tiles that self-organize by color/price into flowing groups | "Discover. Explore. Buy — by having a conversation." |
+| 4 | 0:34–0:44 | A single glowing transaction point expanding outward into a network of flowing data streams | "But the journey doesn't end when a customer clicks pay." |
+| 5 | 0:44–0:59 | Data streams converging into a rising dashboard: bar charts, revenue lines, connected nodes | "Behind every purchase is an insight waiting to be found." |
+| 6 | 0:59–1:11 | An abstract warehouse/grid of glowing nodes — some dim (low stock), one pulsing forward (forecast) | "From payments to inventory — moving beyond watching data, to acting on it." |
+| 7 | 1:11–1:23 | All prior visuals converge into one connected ring: customer → agent → payment → data → growth | "A smarter journey for the customer. A clearer picture for the business. One connected layer for commerce." |
+
+**[1:23–1:30] Transition into the demo**
+Visual: the cinematic world dissolves into the real CartMind storefront (`search.png`).
+> "But this isn't just an idea. This is what we built." → **Beyond the Vision. Here is the Experience.**
+
+---
+
+## Part 2 — Product demo (1:30–3:30)
 
 ## Feature/page inventory (for brainstorming)
 
@@ -49,29 +77,29 @@
 - **Cart-policy block** — over the hard order-value cap, or a blocked category — stopped before the safety kernel even runs.
 - **Safety-kernel block** — one of the seven checks failed: authorization mismatch, amount mismatch, transaction limit, quantity limit, discount limit, rate limit, or duplicate payment — each with its own plain-English reason.
 
-## Script (2:00, screenshot-driven)
+## Script (screenshot-driven)
 
 Each scene: screenshot(s) to show, and a short overlay line (kept under ~120 characters each so it fits as a single video-tool prompt/caption, not a paragraph).
 
-**[0:00–0:12] Opening** — `search.png` → `chatbot.png`
+**[1:30–1:42] Opening** — `search.png` → `chatbot.png`
 > Beyond payments. Towards smarter commerce.
 
-**[0:12–0:30] Conversational discovery** — `chatbot.png` (zoom chat) → live: "I want a dress" → results
+**[1:42–2:00] Conversational discovery** — `chatbot.png` (zoom chat) → live: "I want a dress" → results
 > Type or speak. Find what you want — without searching endlessly.
 
-**[0:30–0:50] Shopping journey** — `product.png` → `cart.png` → live: add a second item
+**[2:00–2:20] Shopping journey** — `product.png` → `cart.png` → live: add a second item
 > A shopping companion, not a one-shot lookup.
 
-**[0:50–1:10] Checkout + live payment** — `checkout.png` → `live_view.png` → `order_confirmed.png` (+ brief `order_failed.png`)
+**[2:20–2:40] Checkout + live payment** — `checkout.png` → `live_view.png` → `order_confirmed.png` (+ brief `order_failed.png`)
 > Every transaction. Every outcome. Fully visible. (TEST MODE only — no real charge)
 
-**[1:10–1:15] Transition** — cut to black
+**[2:40–2:45] Transition** — cut to black
 > But what happens after the customer clicks Pay?
 
-**[1:15–1:40] Owner dashboard** — `owner.png` pan: stat cards → funnel → manual-vs-agent → blocked ledger
+**[2:45–3:10] Owner dashboard** — `owner.png` pan: stat cards → funnel → manual-vs-agent → blocked ledger
 > Don't just see failures. Understand them.
 
-**[1:40–2:00] Inventory intelligence + close** — `owner.png` (forecast panel)
+**[3:10–3:30] Inventory intelligence + close** — `owner.png` (forecast panel)
 > From conversation to conversion. From payment to insight.
 
 ## Alternate taglines
