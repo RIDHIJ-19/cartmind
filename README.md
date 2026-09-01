@@ -167,11 +167,11 @@ before the next round.
 
 ```mermaid
 sequenceDiagram
-  participant U as Shopper (chat)
-  participant S as Flask /agent/chat
-  participant G as Gating + Safety Kernel
-  participant B as Playwright browser
-  participant R as Razorpay
+  participant U as "Shopper (chat)"
+  participant S as "Flask /agent/chat"
+  participant G as "Gating + Safety Kernel"
+  participant B as "Playwright browser"
+  participant R as "Razorpay"
 
   U->>S: "checkout"
   S->>G: create_cart_mandate + check_cart_against_policy
