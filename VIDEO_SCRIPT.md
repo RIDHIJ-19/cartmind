@@ -20,8 +20,8 @@ not read aloud.
 **Slide 3 — Impact** *(~20s)*
 > "CartMind is a concrete answer, not an argument. Every payment goes through seven independent, deterministic checks — each with a plain-English reason. Two separate gates mean a bug in one can't disable the other. And every attempt, blocked or captured, is reconstructable afterward from a real audit trail."
 
-**Slide 4 — Architecture** *(~15s)*
-> "Under the hood it's three planes: the storefront a human and the AI agent both use — same routes, same rules; a policy core neither can bypass; and Razorpay's real checkout, treated as untrusted until verified."
+**Slide 4 — Architecture** *(~7s)*
+> "Human or agent, same routes. Every request passes through one policy gate before it can touch Razorpay — no shortcuts."
 
 **Slide 5 — Security** *(~15s)*
 > "A few things are structurally true here, not just documented: card fields are never reachable from the agent's own code — the only way in is a real browser typing into Razorpay's iframe. The model's claims are never trusted for anything money-related. And this only ever runs in Razorpay TEST MODE — there's no code path that can move real money."
