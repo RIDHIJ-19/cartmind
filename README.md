@@ -167,28 +167,28 @@ before the next round.
 
 ```mermaid
 sequenceDiagram
-  participant U as "Shopper (chat)"
-  participant S as "Flask /agent/chat"
-  participant G as "Gating + Safety Kernel"
-  participant B as "Playwright browser"
-  participant R as "Razorpay"
+  participant U as Shopper
+  participant S as Storefront
+  participant G as SafetyKernel
+  participant B as Browser
+  participant R as Razorpay
 
-  U->>S: "checkout"
-  S->>G: create_cart_mandate + check_cart_against_policy
-  G-->>S: allowed / blocked + reason
+  U->>S: checkout
+  S->>G: check cart against policy
+  G-->>S: allowed or blocked, with reason
   alt blocked
     S-->>U: plain-language reason, no retry
   else allowed
-    S->>G: safety_kernel.check_payment (7 checks)
-    G-->>S: allowed + real order_id
-    S-->>U: order id + amount, asks for card
+    S->>G: run seven-check payment gate
+    G-->>S: allowed, real order id
+    S-->>U: order id and amount, asks for card
     U->>S: card number, expiry, cvv
-    S->>B: open /checkout, drive real iframe
+    S->>B: open checkout, drive real iframe
     B->>R: type card, submit
-    R-->>B: captured / failed
-    B-->>S: status + step trail
+    R-->>B: captured or failed
+    B-->>S: status and step trail
     S->>S: clear cart, tag order captured
-    S-->>U: reply + toast + redirect to /order-confirmed
+    S-->>U: reply, toast, redirect to order confirmed
   end
 ```
 
