@@ -126,16 +126,23 @@
     line-height: 1.4;
   }
 
-  /* Architecture slide */
+  /* Architecture slide — this one runs edge-to-edge instead of the
+     standard slide padding, since the diagram needs all the width it
+     can get to stay legible rather than cramped into a narrow column. */
+  .slide.wide { padding: 4vh 3vw; }
   .arch-wrap {
     background: var(--panel);
     border: 1px solid var(--line);
     border-radius: 12px;
-    padding: 1.6rem 2rem;
-    max-width: 68rem;
+    padding: 1.6rem 2.2rem;
+    width: 100%;
+    max-width: 96rem;
     overflow-x: auto;
+    display: flex;
+    justify-content: center;
   }
   .arch-wrap pre.mermaid { margin: 0; }
+  .arch-wrap svg { max-width: 100% !important; height: auto !important; }
 
   /* Security checklist slide */
   .checks {
@@ -232,12 +239,29 @@
     </div>
   </section>
 
-  <section class="slide" data-title="Architecture">
+  <section class="slide wide" data-title="Architecture">
     <div class="eyebrow">Design Doc — Architecture</div>
     <h2>Three planes: shared storefront, always-on policy core, untrusted rail</h2>
     <div class="arch-wrap">
 <pre class="mermaid">
-graph TB
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "background": "#131826",
+    "primaryColor": "#1a2033",
+    "primaryTextColor": "#eef1f6",
+    "primaryBorderColor": "#f5a623",
+    "lineColor": "#8b93a7",
+    "secondaryColor": "#1a2033",
+    "tertiaryColor": "#131826",
+    "clusterBkg": "#0f1420",
+    "clusterBorder": "#232a3d",
+    "fontFamily": "IBM Plex Sans, sans-serif",
+    "fontSize": "17px"
+  },
+  "flowchart": { "nodeSpacing": 55, "rankSpacing": 75, "curve": "basis" }
+}}%%
+graph LR
   subgraph Client["Client surface"]
     Human["Human shopper"]
     Widget["Chat widget"]
