@@ -1,0 +1,329 @@
+<title>CartMind Pitch Deck</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0b0e14;
+    --panel: #131826;
+    --panel-2: #1a2033;
+    --ink: #eef1f6;
+    --muted: #8b93a7;
+    --faint: #4b5468;
+    --accent: #f5a623;
+    --accent-dim: #7a5518;
+    --line: #232a3d;
+    --good: #4fd1a5;
+  }
+  @media (prefers-color-scheme: light) {
+    :root:not([data-theme="light"]) {
+      /* This deck is deliberately dark-first — a presentation meant for
+         screen recording reads better on a dark ground regardless of OS
+         theme, so it commits to one visual world rather than inverting. */
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  .deck {
+    height: 100vh;
+    width: 100vw;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6vh 8vw;
+    animation: rise 0.45s ease;
+  }
+  .slide.active { display: flex; }
+  @media (prefers-reduced-motion: reduce) {
+    .slide { animation: none; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.1rem;
+  }
+
+  h1 {
+    font-family: 'Sora', sans-serif;
+    font-weight: 800;
+    font-size: clamp(2.2rem, 5vw, 4rem);
+    line-height: 1.08;
+    margin: 0 0 1rem 0;
+    text-wrap: balance;
+    max-width: 18ch;
+  }
+  h2 {
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+    margin: 0 0 1.5rem 0;
+    text-wrap: balance;
+  }
+  p.lede {
+    font-size: clamp(1.05rem, 1.6vw, 1.35rem);
+    color: var(--muted);
+    max-width: 62ch;
+    line-height: 1.55;
+  }
+
+  .accent { color: var(--accent); }
+
+  /* Slide 1 — hook */
+  .hook-mark {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--faint);
+    margin-top: 2.2rem;
+  }
+
+  /* Slide 2/3 — stat grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.4rem;
+    margin-top: 1rem;
+    max-width: 62rem;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1.6rem 1.6rem 1.4rem;
+  }
+  .stat .num {
+    font-family: 'Sora', sans-serif;
+    font-weight: 700;
+    font-size: 2.1rem;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .label {
+    color: var(--muted);
+    font-size: 0.95rem;
+    margin-top: 0.35rem;
+    line-height: 1.4;
+  }
+
+  /* Architecture slide */
+  .arch-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 1.6rem 2rem;
+    max-width: 68rem;
+    overflow-x: auto;
+  }
+  .arch-wrap pre.mermaid { margin: 0; }
+
+  /* Security checklist slide */
+  .checks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem 2rem;
+    max-width: 56rem;
+    margin-top: 0.5rem;
+  }
+  .check {
+    display: flex;
+    gap: 0.7rem;
+    align-items: baseline;
+    font-size: 1.02rem;
+    color: var(--ink);
+  }
+  .check .tick {
+    color: var(--good);
+    font-family: 'IBM Plex Mono', monospace;
+    flex-shrink: 0;
+  }
+  .check b { color: var(--ink); }
+  .check span.rest { color: var(--muted); }
+
+  /* transition slide */
+  .transition-line {
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    font-size: clamp(1.4rem, 2.6vw, 2rem);
+    color: var(--muted);
+    margin-bottom: 0.6rem;
+  }
+
+  /* chrome: progress + nav */
+  .chrome {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.4rem 2.4rem;
+    pointer-events: none;
+  }
+  .dots { display: flex; gap: 0.5rem; pointer-events: auto; }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--faint);
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .dot.active { background: var(--accent); }
+  .slide-index {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--faint);
+    font-size: 0.85rem;
+    pointer-events: none;
+  }
+  .hint {
+    position: fixed;
+    top: 1.4rem; right: 2.4rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--faint);
+  }
+</style>
+
+<div class="deck" id="deck">
+
+  <section class="slide active" data-title="Hook">
+    <div class="eyebrow">CartMind</div>
+    <h1>Would you let an AI spend your money <span class="accent">unsupervised?</span></h1>
+    <p class="lede">Most people's answer is no — not because agents can't shop, but because nothing stops them from getting it wrong, and no one can prove what happened after.</p>
+    <div class="hook-mark">// this talk is about closing that gap</div>
+  </section>
+
+  <section class="slide" data-title="Problem">
+    <div class="eyebrow">The Problem</div>
+    <h2>Agentic commerce has no trust boundary</h2>
+    <div class="grid">
+      <div class="stat"><div class="num">0</div><div class="label">spend caps most "AI checkout" demos actually enforce</div></div>
+      <div class="stat"><div class="num">1</div><div class="label">source of truth trusted for "did it pay" — the model's own claim</div></div>
+      <div class="stat"><div class="num">?</div><div class="label">way to reconstruct what an agent did, after the fact</div></div>
+    </div>
+  </section>
+
+  <section class="slide" data-title="Impact">
+    <div class="eyebrow">The Impact</div>
+    <h2>What CartMind actually demonstrates</h2>
+    <p class="lede">A concrete, falsifiable trust boundary — not an argument that agents <i>can</i> be made safe, but the exact mechanism that makes them provably bounded.</p>
+    <div class="grid">
+      <div class="stat"><div class="num">7</div><div class="label">independent, deterministic checks in front of every payment — each with a plain-English pass/fail reason</div></div>
+      <div class="stat"><div class="num">2</div><div class="label">separate gates (cart policy + safety kernel) — a bug in one can't disable the other</div></div>
+      <div class="stat"><div class="num">100%</div><div class="label">of blocked and captured attempts reconstructable from the audit trail</div></div>
+    </div>
+  </section>
+
+  <section class="slide" data-title="Architecture">
+    <div class="eyebrow">Design Doc — Architecture</div>
+    <h2>Three planes: shared storefront, always-on policy core, untrusted rail</h2>
+    <div class="arch-wrap">
+<pre class="mermaid">
+graph TB
+  subgraph Client["Client surface"]
+    Human["Human shopper"]
+    Widget["Chat widget"]
+  end
+  subgraph Storefront["Flask storefront"]
+    Routes["Catalog / cart / checkout"]
+    Tools["Tool dispatch"]
+  end
+  subgraph Policy["Policy core — always on"]
+    Gating["gating.py<br/>cap + category + confirmation"]
+    Kernel["safety_kernel.py<br/>7-check gate"]
+  end
+  subgraph External["External / untrusted"]
+    LLM["LLM tool-calling"]
+    Browser["Real browser"]
+    Razorpay["Razorpay TEST API"]
+    DB[("Audit trail + ledger")]
+  end
+  Human --> Routes
+  Widget --> LLM -- tool call --> Tools --> Routes
+  Tools --> Browser --> Razorpay
+  Routes --> Gating --> Kernel
+  Kernel -- allowed --> Razorpay
+  Kernel -- blocked --> Widget
+  Razorpay --> Routes --> DB
+</pre>
+    </div>
+  </section>
+
+  <section class="slide" data-title="Security">
+    <div class="eyebrow">Design Doc — Security Model</div>
+    <h2>Enforced today, not aspirational</h2>
+    <div class="checks">
+      <div class="check"><span class="tick">✓</span><span><b>Iframe isolation is load-bearing</b><span class="rest"> — card fields are never reachable from agent JS</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Two independent gates</b><span class="rest"> — cart policy and the safety kernel are separate code paths</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>No implicit spend</b><span class="rest"> — a card must appear in this turn's conversation, never defaulted</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Model claims are never trusted</b><span class="rest"> — the server verifies real HTTP responses, not prose</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>TEST MODE structurally enforced</b><span class="rest"> — live keys are rejected outright, no code path moves real money</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Every decision is logged</b><span class="rest"> — allowed or blocked, with a plain-English reason</span></span></div>
+    </div>
+  </section>
+
+  <section class="slide" data-title="Transition">
+    <div class="transition-line">But this isn't just a design document.</div>
+    <h1>Here's what we <span class="accent">built.</span></h1>
+  </section>
+
+</div>
+
+<div class="chrome">
+  <span class="slide-index" id="slideIndex">01 / 06</span>
+  <div class="dots" id="dots"></div>
+</div>
+<div class="hint">← → to navigate</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const dotsEl = document.getElementById('dots');
+  const indexEl = document.getElementById('slideIndex');
+  let current = 0;
+
+  slides.forEach((s, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.title = s.dataset.title;
+    d.addEventListener('click', () => go(i));
+    dotsEl.appendChild(d);
+  });
+  const dots = Array.from(dotsEl.children);
+
+  function go(i) {
+    if (i < 0 || i >= slides.length) return;
+    slides[current].classList.remove('active');
+    dots[current].classList.remove('active');
+    current = i;
+    slides[current].classList.add('active');
+    dots[current].classList.add('active');
+    indexEl.textContent = String(current + 1).padStart(2, '0') + ' / ' + String(slides.length).padStart(2, '0');
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight' || e.key === ' ') go(current + 1);
+    if (e.key === 'ArrowLeft') go(current - 1);
+  });
+  document.getElementById('deck').addEventListener('click', (e) => {
+    if (e.target.closest('.dots')) return;
+    go(current + 1);
+  });
+</script>

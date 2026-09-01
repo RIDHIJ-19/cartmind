@@ -1,32 +1,38 @@
-# CartMind — Demo Video Script (~3:30)
+# CartMind — Demo Video Script
 
-Two parts: a cinematic AI-generated vision intro (~1:30), then the real
-product demo (~2:00, screenshot-driven — see below).
+You're narrating live over a slide deck for the intro, then cutting to your
+own screen-recorded demo (already made). Two parts:
 
-## Part 1 — Cinematic vision intro (0:00–1:30)
+## Part 1 — Live-narrated intro (your voice + slides, ~1:15)
 
-Seven short AI-generated clips (8–12s each), abstract visuals only — no
-literal UI or readable text inside the generated footage itself (video
-generators distort both); all real text/branding/voiceover added afterward
-in an editor. Total generated footage ≈83s + title cards ≈1:30.
+Slide deck: **[CartMind Pitch Deck](https://claude.ai/code/artifact/d802104a-054c-403a-bfb4-d4be570725dd)**
+— 6 slides (Hook → Problem → Impact → Architecture → Security → Transition),
+advance with → or a click while you talk. Read each slide's script beat,
+then move on; don't read the slide verbatim, it's there to be glanced at,
+not read aloud.
 
-| # | Time | Clip (generate) | Voiceover / overlay |
-|---|---|---|---|
-| 1 | 0:00–0:10 | Fragmented online shopping: scrolling, tabs, filters, abandoned carts, a failed payment icon | "Online commerce is faster than ever. But finding what you want is still complicated — and every transaction tells a story nobody's reading." |
-| 2 | 0:10–0:22 | Voice waves forming near a dark futuristic interface; the waves resolve into soft shapes | "What if commerce could simply understand you?" |
-| 3 | 0:22–0:34 | Voice waves morphing into abstract product tiles that self-organize by color/price into flowing groups | "Discover. Explore. Buy — by having a conversation." |
-| 4 | 0:34–0:44 | A single glowing transaction point expanding outward into a network of flowing data streams | "But the journey doesn't end when a customer clicks pay." |
-| 5 | 0:44–0:59 | Data streams converging into a rising dashboard: bar charts, revenue lines, connected nodes | "Behind every purchase is an insight waiting to be found." |
-| 6 | 0:59–1:11 | An abstract warehouse/grid of glowing nodes — some dim (low stock), one pulsing forward (forecast) | "From payments to inventory — moving beyond watching data, to acting on it." |
-| 7 | 1:11–1:23 | All prior visuals converge into one connected ring: customer → agent → payment → data → growth | "A smarter journey for the customer. A clearer picture for the business. One connected layer for commerce." |
+**Slide 1 — Hook** *(~15s)*
+> "Would you let an AI spend your money unsupervised? Most people's honest answer is no — not because agents can't shop, but because nothing stops them from getting it wrong, and no one can prove what happened afterward. That gap is what CartMind is about."
 
-**[1:23–1:30] Transition into the demo**
-Visual: the cinematic world dissolves into the real CartMind storefront (`search.png`).
-> "But this isn't just an idea. This is what we built." → **Beyond the Vision. Here is the Experience.**
+**Slide 2 — Problem** *(~15s)*
+> "Most 'AI checkout' demos skip the hard part. There's no real spend cap, the only proof a payment happened is the model's own word for it, and if something goes wrong, there's no way to reconstruct why."
+
+**Slide 3 — Impact** *(~20s)*
+> "CartMind is a concrete answer, not an argument. Every payment goes through seven independent, deterministic checks — each with a plain-English reason. Two separate gates mean a bug in one can't disable the other. And every attempt, blocked or captured, is reconstructable afterward from a real audit trail."
+
+**Slide 4 — Architecture** *(~15s)*
+> "Under the hood it's three planes: the storefront a human and the AI agent both use — same routes, same rules; a policy core neither can bypass; and Razorpay's real checkout, treated as untrusted until verified."
+
+**Slide 5 — Security** *(~15s)*
+> "A few things are structurally true here, not just documented: card fields are never reachable from the agent's own code — the only way in is a real browser typing into Razorpay's iframe. The model's claims are never trusted for anything money-related. And this only ever runs in Razorpay TEST MODE — there's no code path that can move real money."
+
+**Slide 6 — Transition** *(~5s)*
+> "But this isn't just a design document. Here's what we built."
+→ cut directly to your demo recording.
 
 ---
 
-## Part 2 — Product demo (1:30–3:30)
+## Part 2 — Product demo (your recording)
 
 ## Feature/page inventory (for brainstorming)
 
@@ -77,9 +83,10 @@ Visual: the cinematic world dissolves into the real CartMind storefront (`search
 - **Cart-policy block** — over the hard order-value cap, or a blocked category — stopped before the safety kernel even runs.
 - **Safety-kernel block** — one of the seven checks failed: authorization mismatch, amount mismatch, transaction limit, quantity limit, discount limit, rate limit, or duplicate payment — each with its own plain-English reason.
 
-## Script (screenshot-driven)
+## Reference: original screenshot-driven shot list
 
-Each scene: screenshot(s) to show, and a short overlay line (kept under ~120 characters each so it fits as a single video-tool prompt/caption, not a paragraph).
+You already recorded your own demo — kept here only as a reference for what
+each screen/beat was meant to cover, in case you want to reshoot or extend it.
 
 **[1:30–1:42] Opening** — `search.png` → `chatbot.png`
 > Beyond payments. Towards smarter commerce.
