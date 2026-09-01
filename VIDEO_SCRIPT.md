@@ -49,24 +49,38 @@
 - **Cart-policy block** — over the hard order-value cap, or a blocked category — stopped before the safety kernel even runs.
 - **Safety-kernel block** — one of the seven checks failed: authorization mismatch, amount mismatch, transaction limit, quantity limit, discount limit, rate limit, or duplicate payment — each with its own plain-English reason.
 
-## Script
+## Script (2:00, screenshot-driven)
 
-**[0:00–0:30] Problem**
-AI agents doing shopping/payments on your behalf sounds great — but how do you trust an AI with your money? No caps, no audit trail, no way to prove what it did.
+Each scene names the exact screenshot(s) to show from `docs/screenshots/`, live footage to capture instead, and the voiceover/overlay line. Keep cuts fast — no screen holds longer than the line takes to say.
 
-**[0:30–1:00] Solution + core pitch**
-CartMind: an AI shopping agent with a gated, auditable payment flow. Every payment goes through a 7-check safety gate + spend cap + explicit confirmation — before Razorpay ever sees it. Nothing moves without proof.
+**[0:00–0:12] Opening**
+Screens: `search.png`, then `chatbot.png`.
+> "What if payments could do more than process a transaction — what if the same platform could help customers find what they want, and help the business understand everything happening behind every purchase? This is CartMind: an AI shopping agent with a gated, auditable payment flow."
 
-**[1:00–1:30] Feature tour (fast cuts)**
-- Chat: search → add to cart → checkout → pay, by voice or text
-- Live view: watch the agent type the real card into Razorpay live
-- Owner dashboard: see exactly what the agent did and why, in numbers
+**[0:12–0:30] Conversational discovery**
+Screens: `chatbot.png` (zoom on the chat panel), then live footage of typing "I want a dress" → results appearing.
+> "Shopping starts with a conversation, typed or spoken. Ask for a product, a color, a price range — CartMind narrows the catalog instead of making you scroll it."
 
-**[1:30–2:00] How it works (backend, 30s)**
-Flask storefront + LLM tool-calling. The model can only *request* actions — the server decides what's allowed. A Playwright browser drives the real Razorpay iframe (card fields are sandboxed by design, so this is the only way in). Every check, pass or fail, is logged to Postgres.
+**[0:30–0:50] Shopping journey**
+Screens: `product.png` → `cart.png` → live footage adding a second item (e.g. "add a shirt too").
+> "Explore a product, add it to cart, then keep going — ask for something else and it searches, shows results, and adds again. It's a shopping companion, not a one-shot lookup."
 
-**[2:00–2:30] One issue + fix**
-Two real bumps: (1) LLM cost/reliability — switched to a smaller model + tightened prompts + forced tool-calls so it can't fake success. (2) Payment wasn't visible on a hosted server — built a live CDP screencast over WebSocket so you can watch the card get typed in real time, even headless.
+**[0:50–1:10] Checkout and live payment**
+Screens: `checkout.png` → `live_view.png` → `order_confirmed.png` (and briefly `order_failed.png`).
+> "Checkout runs through a real payment flow on Razorpay TEST MODE — a safe, controlled replica, not a live commercial site, so the entire journey can be demonstrated without real credentials or production bot defenses. Every card gets typed into the real checkout iframe live, streamed so you can watch it happen — and every outcome, success or failure, is fully visible, never hidden."
 
-**[2:30+] Live demo**
-Add to cart → checkout → pay by voice → show live stream → show order confirmed → show owner dashboard updating.
+**[1:10–1:15] Transition**
+> "But what happens after the customer clicks Pay?"
+
+**[1:15–1:40] Owner dashboard — business intelligence**
+Screens: `owner.png` (pan across stat cards → funnel → manual-vs-agent split → blocked-attempt ledger).
+> "The owner dashboard turns every transaction into insight: revenue, success rate, and average order value at a glance; a checkout funnel showing exactly where customers drop off; manual shopping compared side-by-side with the AI agent; and when a payment fails, the exact stage and reason — not just a red X."
+
+**[1:40–2:00] Inventory intelligence + close**
+Screens: `owner.png` (low-stock/forecast panel).
+> "It looks past payments too — flagging products selling faster than stock covers, and slow movers worth promoting. From conversation to conversion, from payment to insight: CartMind is the intelligence layer around commerce, not just the payment gateway."
+
+## Alternate taglines
+- "Beyond Payments. Smarter Commerce."
+- "Every Purchase Tells a Story. Understand the Whole Story."
+- "Discover. Pay. Analyze. Grow."
