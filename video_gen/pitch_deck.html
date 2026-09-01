@@ -253,6 +253,36 @@
     </div>
   </section>
 
+  <section class="slide" data-title="The Agent">
+    <div class="eyebrow">What We Built</div>
+    <h2>One agent, the full shopping pipeline</h2>
+    <div class="checks">
+      <div class="check"><span class="tick">✓</span><span><b>Voice or text</b><span class="rest"> — speak or type, same agent, same guardrails</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Search &amp; filter</b><span class="rest"> — by price, size, color, category, in plain language</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Browse &amp; add to cart</b><span class="rest"> — views products, compares, adds — like a real shopper</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Checkout &amp; pay</b><span class="rest"> — real Razorpay checkout, gated by the policy core</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Live, watchable</b><span class="rest"> — every step visible, not a black box</span></span></div>
+      <div class="check"><span class="tick">✓</span><span><b>Owner-side visibility</b><span class="rest"> — every action feeds the same dashboard a human's does</span></span></div>
+    </div>
+  </section>
+
+  <section class="slide" data-title="Why a Replica">
+    <div class="eyebrow">A Deliberate Constraint</div>
+    <h2>Why a replica storefront, not Amazon or Flipkart</h2>
+    <p class="lede">Real commercial platforms actively block automated checkout — bot detection, CAPTCHAs, and auth flows built to stop exactly this kind of traffic. There's no way to test an AI shopping agent's full pipeline against them safely or reliably.</p>
+    <p class="lede">So CartMind ships its own faithful storefront instead — real catalog, real cart, real Razorpay TEST checkout — so the entire agent pipeline can be demonstrated end to end, without fighting someone else's fraud defenses to do it.</p>
+  </section>
+
+  <section class="slide" data-title="Business Impact">
+    <div class="eyebrow">The Business Case</div>
+    <h2>Razorpay, beyond a payment gateway</h2>
+    <div class="grid">
+      <div class="stat"><div class="num">↑</div><div class="label">revenue — an agent that can complete checkout captures sales a confusing UI would lose</div></div>
+      <div class="stat"><div class="num">→</div><div class="label">funnel visibility — see exactly where manual and agent checkouts drop off, and why</div></div>
+      <div class="stat"><div class="num">+</div><div class="label">an intelligence layer on top of payments: revenue, channel split, and demand forecasting — not just a rail money moves through</div></div>
+    </div>
+  </section>
+
   <section class="slide" data-title="Transition">
     <div class="transition-line">But this isn't just a design document.</div>
     <h1>Here's what we <span class="accent">built.</span></h1>
@@ -261,7 +291,7 @@
 </div>
 
 <div class="chrome">
-  <span class="slide-index" id="slideIndex">01 / 06</span>
+  <span class="slide-index" id="slideIndex">01 / 09</span>
   <div class="dots" id="dots"></div>
 </div>
 <div class="hint">← → to navigate</div>
