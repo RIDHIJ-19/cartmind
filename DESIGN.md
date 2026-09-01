@@ -37,6 +37,13 @@ Agentic commerce needs a demonstrable answer to one question: can an AI be trust
 
 Three planes: a storefront the agent and a human share, a policy core neither can bypass, and an external payment rail treated as untrusted until verified.
 
+![Three Planes Architecture](docs/diagrams/architecture.png)
+
+*Fig. 1 — Component view. The policy core sits between every route and Razorpay; the agent has no path that skips it. `Allowed`/`blocked` flows out of the safety kernel are the two only ways a tool call can end. See Fig. 1b below for the live payment view's parallel, read-only channel (added after this diagram — CDP screencast + WebSocket), which isn't pictured here.*
+
+<details>
+<summary>Fig. 1b — Textual/mermaid version, including the live payment view</summary>
+
 ```mermaid
 graph TB
   subgraph Client["Client surface"]
@@ -80,7 +87,9 @@ graph TB
   Routes --> ChatAPI
 ```
 
-*Fig. 1 — Component view. The policy core sits between every route and Razorpay; the agent has no path that skips it. The live payment view is a parallel, read-only channel — it can show what the browser is doing but has no path back into Tools or the policy core.*
+*Fig. 1b — same component view as Fig. 1, with the live payment view's parallel, read-only channel included: it can show what the browser is doing but has no path back into Tools or the policy core.*
+
+</details>
 
 ### Design decisions
 
