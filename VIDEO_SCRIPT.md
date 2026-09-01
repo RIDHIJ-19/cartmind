@@ -51,34 +51,28 @@
 
 ## Script (2:00, screenshot-driven)
 
-Each scene names the exact screenshot(s) to show from `docs/screenshots/`, live footage to capture instead, and the voiceover/overlay line. Keep cuts fast — no screen holds longer than the line takes to say.
+Each scene: screenshot(s) to show, and a short overlay line (kept under ~120 characters each so it fits as a single video-tool prompt/caption, not a paragraph).
 
-**[0:00–0:12] Opening**
-Screens: `search.png`, then `chatbot.png`.
-> "What if payments could do more than process a transaction — what if the same platform could help customers find what they want, and help the business understand everything happening behind every purchase? This is CartMind: an AI shopping agent with a gated, auditable payment flow."
+**[0:00–0:12] Opening** — `search.png` → `chatbot.png`
+> Beyond payments. Towards smarter commerce.
 
-**[0:12–0:30] Conversational discovery**
-Screens: `chatbot.png` (zoom on the chat panel), then live footage of typing "I want a dress" → results appearing.
-> "Shopping starts with a conversation, typed or spoken. Ask for a product, a color, a price range — CartMind narrows the catalog instead of making you scroll it."
+**[0:12–0:30] Conversational discovery** — `chatbot.png` (zoom chat) → live: "I want a dress" → results
+> Type or speak. Find what you want — without searching endlessly.
 
-**[0:30–0:50] Shopping journey**
-Screens: `product.png` → `cart.png` → live footage adding a second item (e.g. "add a shirt too").
-> "Explore a product, add it to cart, then keep going — ask for something else and it searches, shows results, and adds again. It's a shopping companion, not a one-shot lookup."
+**[0:30–0:50] Shopping journey** — `product.png` → `cart.png` → live: add a second item
+> A shopping companion, not a one-shot lookup.
 
-**[0:50–1:10] Checkout and live payment**
-Screens: `checkout.png` → `live_view.png` → `order_confirmed.png` (and briefly `order_failed.png`).
-> "Checkout runs through a real payment flow on Razorpay TEST MODE — a safe, controlled replica, not a live commercial site, so the entire journey can be demonstrated without real credentials or production bot defenses. Every card gets typed into the real checkout iframe live, streamed so you can watch it happen — and every outcome, success or failure, is fully visible, never hidden."
+**[0:50–1:10] Checkout + live payment** — `checkout.png` → `live_view.png` → `order_confirmed.png` (+ brief `order_failed.png`)
+> Every transaction. Every outcome. Fully visible. (TEST MODE only — no real charge)
 
-**[1:10–1:15] Transition**
-> "But what happens after the customer clicks Pay?"
+**[1:10–1:15] Transition** — cut to black
+> But what happens after the customer clicks Pay?
 
-**[1:15–1:40] Owner dashboard — business intelligence**
-Screens: `owner.png` (pan across stat cards → funnel → manual-vs-agent split → blocked-attempt ledger).
-> "The owner dashboard turns every transaction into insight: revenue, success rate, and average order value at a glance; a checkout funnel showing exactly where customers drop off; manual shopping compared side-by-side with the AI agent; and when a payment fails, the exact stage and reason — not just a red X."
+**[1:15–1:40] Owner dashboard** — `owner.png` pan: stat cards → funnel → manual-vs-agent → blocked ledger
+> Don't just see failures. Understand them.
 
-**[1:40–2:00] Inventory intelligence + close**
-Screens: `owner.png` (low-stock/forecast panel).
-> "It looks past payments too — flagging products selling faster than stock covers, and slow movers worth promoting. From conversation to conversion, from payment to insight: CartMind is the intelligence layer around commerce, not just the payment gateway."
+**[1:40–2:00] Inventory intelligence + close** — `owner.png` (forecast panel)
+> From conversation to conversion. From payment to insight.
 
 ## Alternate taglines
 - "Beyond Payments. Smarter Commerce."
