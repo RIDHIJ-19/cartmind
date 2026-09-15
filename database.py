@@ -1,9 +1,11 @@
 import json
+import logging
 import os
 import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
 
 DATABASE_PATH = Path(__file__).resolve().parent / "cartmind.db"
 
@@ -63,6 +65,11 @@ class CartMindDatabase:
                     password_hash TEXT NOT NULL,
                     name TEXT NOT NULL DEFAULT ''
                 );
+                CREATE TABLE IF NOT EXISTS payment_attempts (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    transaction_id TEXT NOT NULL,
+                    attempted_at REAL NOT NULL
+                );
                 """
             postgres_schema = """
                 CREATE TABLE IF NOT EXISTS audit_events (
@@ -92,6 +99,11 @@ class CartMindDatabase:
                     password_hash TEXT NOT NULL,
                     name TEXT NOT NULL DEFAULT ''
                 );
+                CREATE TABLE IF NOT EXISTS payment_attempts (
+                    id BIGSERIAL PRIMARY KEY,
+                    transaction_id TEXT NOT NULL,
+                    attempted_at DOUBLE PRECISION NOT NULL
+                );
                 """
             if self.use_postgres:
                 with connection.cursor() as cursor:
@@ -113,8 +125,11 @@ class CartMindDatabase:
             try:
                 with self._connect() as connection:
                     connection.execute(statement)
-            except Exception:
-                pass
+            except Exception as exc:
+                message = str(exc).lower()
+                if "already exists" in message or "duplicate column" in message:
+                    continue
+                logger.warning("Migration statement failed (%s): %s", statement, exc)
 
     def add_event(self, event_type, action, status, amount_inr=0, details=None):
         with self._connect() as connection:
@@ -291,6 +306,7 @@ class CartMindDatabase:
             try:
                 stamp = datetime.strptime(row["created_at"], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
             except ValueError:
+                logger.warning("Unparseable created_at timestamp in audit_events: %r", row["created_at"])
                 continue
             if stamp >= cutoff:
                 count += 1
@@ -326,6 +342,27 @@ class CartMindDatabase:
                 "SELECT action, status, COUNT(*) as n FROM audit_events GROUP BY action, status"
             )]
         return rows
+
+    def record_payment_attempt(self, transaction_id, timestamp):
+        with self._connect() as connection:
+            sql = "INSERT INTO payment_attempts (transaction_id, attempted_at) VALUES (?, ?)"
+            if self.use_postgres:
+                sql = sql.replace("?", "%s")
+            connection.execute(sql, (transaction_id, timestamp))
+            # Opportunistic cleanup so this table doesn't grow unbounded —
+            # attempts older than an hour are never relevant to a 60s window.
+            prune_sql = "DELETE FROM payment_attempts WHERE attempted_at < ?"
+            if self.use_postgres:
+                prune_sql = prune_sql.replace("?", "%s")
+            connection.execute(prune_sql, (timestamp - 3600,))
+
+    def recent_attempt_count(self, transaction_id, since_timestamp):
+        with self._connect() as connection:
+            sql = "SELECT COUNT(*) as n FROM payment_attempts WHERE transaction_id = ? AND attempted_at >= ?"
+            if self.use_postgres:
+                sql = sql.replace("?", "%s")
+            row = connection.execute(sql, (transaction_id, since_timestamp)).fetchone()
+        return dict(row)["n"]
 
     def snapshot(self):
         with self._connect() as connection:

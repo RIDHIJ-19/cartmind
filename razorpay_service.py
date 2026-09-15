@@ -1,5 +1,18 @@
+import logging
 import os
+import secrets
 from typing import Any, Dict, Optional
+
+logger = logging.getLogger(__name__)
+
+
+class LiveKeyRejectedError(RuntimeError):
+    """Raised when a production (rzp_live_) Razorpay key is supplied.
+
+    This app is a demo that automates typing card details into the Razorpay
+    checkout iframe. It must never be pointed at a live key pair, so we
+    refuse to construct a client rather than risk moving real money.
+    """
 
 
 class RazorpayService:
@@ -13,14 +26,27 @@ class RazorpayService:
     def __init__(self, key_id: Optional[str] = None, key_secret: Optional[str] = None):
         self.key_id = key_id or os.getenv("RAZORPAY_KEY_ID")
         self.key_secret = key_secret or os.getenv("RAZORPAY_KEY_SECRET")
+
+        if self.key_id and self.key_id.startswith("rzp_live_"):
+            raise LiveKeyRejectedError(
+                "RAZORPAY_KEY_ID starts with 'rzp_live_'. This demo only supports "
+                "Razorpay TEST MODE keys (rzp_test_...) and refuses to run against "
+                "live credentials."
+            )
+
         self.use_simulator = not bool(self.key_id and self.key_secret)
 
-        try:
-            import razorpay  # noqa: F401
-            self.client = None if self.use_simulator else razorpay.Client(auth=(self.key_id, self.key_secret))
-        except Exception:
-            self.client = None
-            self.use_simulator = True
+        self.client = None
+        if not self.use_simulator:
+            try:
+                import razorpay
+                self.client = razorpay.Client(auth=(self.key_id, self.key_secret))
+            except ImportError:
+                logger.warning("razorpay package not installed; falling back to simulator")
+                self.use_simulator = True
+            except Exception:
+                logger.exception("Failed to construct razorpay.Client; falling back to simulator")
+                self.use_simulator = True
 
     def _simulate_order(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         force_fail = bool(payload.get("force_fail", False))
@@ -31,7 +57,7 @@ class RazorpayService:
             status = "paid"
 
         return {
-            "id": f"order_{abs(hash(str(payload))) % 1000000}",
+            "id": f"order_sim_{secrets.token_hex(8)}",
             "entity": "order",
             "amount": amount,
             "currency": currency,
@@ -62,6 +88,7 @@ class RazorpayService:
                 "receipt": result.get("receipt", "demo_receipt"),
             }
         except Exception as exc:
+            logger.exception("Razorpay order.create failed")
             return {
                 "id": None,
                 "entity": "order",
@@ -98,6 +125,7 @@ class RazorpayService:
                 "order_id": order_id,
             }
         except Exception as exc:
+            logger.exception("Razorpay payment.capture failed")
             return {
                 "id": None,
                 "entity": "payment",
@@ -117,6 +145,7 @@ class RazorpayService:
             })
             return True
         except Exception:
+            logger.exception("Razorpay payment signature verification failed")
             return False
 
 

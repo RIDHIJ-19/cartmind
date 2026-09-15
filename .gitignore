@@ -8,3 +8,6 @@ cartmind-chrome-debug-profile/
 .venv/
 node_modules/
 Screenshot *.png
+server_out.log
+server_err.log
+.pytest_cache/

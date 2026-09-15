@@ -223,11 +223,16 @@ Postgres (Neon) in production, SQLite locally, selected purely by whether `DATAB
 > - **Two independent gates, not one.** `gating.py`'s cart-level policy and `safety_kernel.py`'s seven-check payment gate are separate code paths; a bug in one doesn't disable the other.
 > - **Seven checks, each falsifiable in isolation:** authorization match, recalculated-amount match, transaction limit, quantity limit, discount limit, rate limit, duplicate-payment check — every pass/fail carries a plain-English reason into the audit trail.
 > - **No implicit spend.** `pay_with_test_card` requires card details already present in the conversation this turn; the system prompt and a server-side forced-tool-call check both refuse to default to a stored card silently.
-> - **TEST MODE is structurally enforced.** `razorpay_service.py` rejects `rzp_live_` keys outright — there is no code path in this repo that can move real money.
+> - **TEST MODE is structurally enforced.** `razorpay_service.py` rejects `rzp_live_` keys outright, refusing to construct a client — there is no code path in this repo that can move real money.
+> - **Fail-closed secrets.** `STOREFRONT_SECRET` and `OWNER_PASSWORD` have no live-deployment fallback: on a hosted host (`RENDER` set) the app refuses to start / disables the owner console rather than falling back to a hardcoded default. Locally, an unset `STOREFRONT_SECRET` generates a random per-process key (sessions just won't survive a restart) instead of using a known string.
+> - **`/trail` requires an owner session.** The raw audit/payments dump was previously reachable by anyone; it now returns 401 without the same `is_owner` session check `/owner` uses.
+> - **The payment-stream WebSocket is scoped to its creating session.** `/ws/payment-stream/<id>` now checks that the connecting browser session matches the one that registered the stream id (in `agent_chat`, before any LLM call), and closes the socket otherwise — previously possession of the id alone was sufficient.
+> - **Catalog text reaching the LLM is sanitized.** `_sanitize_catalog_text()` strips common prompt-injection framing ("ignore previous instructions", `system:`) and caps field length before product name/description enter the model's context.
+> - **Rate limiting is persistent and counts every attempt.** `safety_kernel.py`'s seven-check gate previously only recorded *successful* attempts (so repeated mismatched-amount attempts never tripped `RATE_LIMIT_CHECK`) and kept that count in-process only, meaning gunicorn's multiple workers each had their own independent budget. It now records every attempt — allowed or blocked — in the database, shared across workers and process restarts.
 
 **Threat notes specific to an LLM-driven checkout**
 
-- **Prompt injection via product data.** Catalog text (names, descriptions) flows into the model's context; nothing in it is currently sanitized against instruction-like content. Low blast radius today because the model still can't call the payment tool without a real card appearing in the conversation.
+- **Prompt injection via product data.** Mitigated, not eliminated — sanitization strips known injection phrasing but this isn't a general defense against adversarial catalog content. Low blast radius regardless, since the model still can't call the payment tool without a real card appearing in the conversation.
 - **Model narration vs. ground truth.** The model's own claims are never trusted for anything money-related — the server verifies tool calls happened and reads results from real HTTP responses, not from the model's prose.
 - **Session-cookie handoff to automation.** The Playwright browser is handed the requester's session cookie so it acts as that user; this is safe within a single trusted server process but would need scoping (short-lived, single-use tokens) before this pattern is exposed multi-tenant.
 
@@ -239,7 +244,7 @@ Postgres (Neon) in production, SQLite locally, selected purely by whether `DATAB
 > - **Small/rate-limited LLMs are measurably less reliable** at the multi-step tool sequence checkout requires — mitigated with forced tool-choice and reply-overriding safeguards, not eliminated.
 > - **No rate limiting or bot defense** on `/agent/chat` itself — the seven-check gate limits blast radius per transaction, not request volume.
 > - **Guest-account checkout** means auditability is per-session, not per-verified-identity — acceptable for a demo, not for a real deployment.
-> - **The live payment stream is unauthenticated by stream id alone.** Anyone who learns a `stream_id` (a client-generated UUID) can open `/ws/payment-stream/<id>` and watch those frames — low risk today since it's a random per-session value carrying no card data server-side, but it isn't scoped to the session that created it.
+> - **The checkout order-reuse race is only mitigated within one process.** A per-user `threading.Lock` in `storefront/app.py` prevents two near-simultaneous requests from the same worker creating duplicate Razorpay orders, but doesn't coordinate across gunicorn's multiple workers.
 
 ### Impact
 
@@ -257,14 +262,22 @@ Postgres (Neon) in production, SQLite locally, selected purely by whether `DATAB
 
 ### Hardening roadmap
 
-In priority order, if this moved from demo toward production:
+Done since the original demo pass — kept here for a record of what changed:
+
+- ~~Sanitize catalog text reaching the LLM's context~~ — done (`_sanitize_catalog_text`).
+- ~~Scope `/ws/payment-stream/<id>` to the session that created it~~ — done (`STREAM_OWNERS`).
+- ~~`razorpay_service.py` actually rejects `rzp_live_` keys~~ — done (previously only claimed in this README, not enforced in code).
+- ~~Fail-closed `STOREFRONT_SECRET` / `OWNER_PASSWORD`, authenticated `/trail`~~ — done.
+- ~~Rate limiting persisted across workers, counting every attempt not just successful ones~~ — done (`DatabaseRateLimiter`).
+- ~~A real pytest suite~~ — done (`tests/`, 29 tests over `safety_kernel.py`, `gating.py`, `database.py`, `razorpay_service.py`).
+
+Still open, in priority order, if this moved further from demo toward production:
 
 1. Connection pooling for the audit/payments database — removes the single largest source of unbudgeted latency.
 2. Real user authentication in place of guest-account checkout, so audit records tie to a verified identity.
-3. Sanitize catalog text reaching the LLM's context; treat product data as untrusted input, not trusted system content.
-4. Short-lived, single-purpose session tokens for the automation handoff, scoped narrower than the user's full session cookie.
-5. Rate limiting and anomaly detection on `/agent/chat` independent of the per-transaction safety kernel.
-6. Scope `/ws/payment-stream/<id>` to the session that created it, instead of trusting possession of the id alone.
+3. Short-lived, single-purpose session tokens for the automation handoff, scoped narrower than the user's full session cookie.
+4. Rate limiting and anomaly detection on `/agent/chat` independent of the per-transaction safety kernel.
+5. Cross-worker coordination for the checkout order-reuse lock (currently per-process only).
 
 ## Design notes
 
@@ -346,9 +359,17 @@ logging to the actual automation and reading real production logs:
 - `razorpay_service.py` — Razorpay SDK wrapper with a local simulator
   fallback when no `rzp_test_...` keys are configured
 - `database.py` — SQLite (local) / Neon Postgres (`DATABASE_URL`) audit
-  trail, payments, and user accounts
+  trail, payments, user accounts, and the shared payment-attempt table
+  backing cross-worker rate limiting
+- `dashboard_service.py` — aggregation and SVG chart-geometry (donut,
+  funnel, gauge, sparkline) for the owner console; kept separate from
+  `storefront/app.py`'s `/owner` route, which now just handles auth and
+  passes this module's output straight to the template
 - `test_pipeline.py` — end-to-end scenarios with assertions (happy path,
   blocked category, forced decline)
+- `tests/` — pytest suite (29 tests) covering `safety_kernel.py`,
+  `gating.py`, `database.py`, and `razorpay_service.py`, including
+  regression tests for the rate-limiter and live-key-rejection fixes above
 
 **Storefront**
 - `storefront/app.py` — Flask storefront: search / product / cart /
@@ -441,7 +462,10 @@ Both are already wired as defaults in the chat, `agent/agent.py`, and
 
 ```bash
 cd cartmind
-python test_pipeline.py
+python test_pipeline.py          # manual end-to-end scenario script
+
+python -m pip install -r requirements-dev.txt
+pytest                            # unit tests: safety kernel, gating, database, razorpay service
 ```
 
 ## Environment

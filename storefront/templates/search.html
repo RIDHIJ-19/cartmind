@@ -1,7 +1,21 @@
 {% extends "base.html" %}
 {% block title %}{{ q or 'All products' }} — CartMind{% endblock %}
 {% block content %}
-<div class="search-layout">
+{% if not q and not category and not color and not max_price %}
+<section class="hero">
+  <div class="hero-copy">
+    <span class="hero-kicker">AI-powered shopping</span>
+    <h1>Shop at the speed of <span class="hero-accent">thought</span>.</h1>
+    <p>Tell CartMind's assistant what you're after — it searches, adds to cart, and checks out through a real, audited payment gate. No dark patterns, no guesswork.</p>
+    <div class="hero-cta">
+      <button type="button" class="hero-btn" onclick="document.getElementById('agent-toggle').click()">💬 Ask CartMind</button>
+      <a href="#results-anchor" class="hero-link">Browse everything ↓</a>
+    </div>
+  </div>
+  <div class="hero-orb"></div>
+</section>
+{% endif %}
+<div class="search-layout" id="results-anchor">
   <aside class="filters">
     <h3>Department</h3>
     <div class="filter-group swatch-row">
@@ -31,6 +45,7 @@
     <div class="grid" id="results">
       {% for p in products %}
       <article class="product-card"
+           style="animation-delay:{{ (loop.index0 % 12) * 0.04 }}s"
            data-product-id="{{ p.sku }}"
            data-price="{{ p.price_inr }}"
            data-color="{{ p.get('color', '') }}"

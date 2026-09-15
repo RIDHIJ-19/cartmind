@@ -3,36 +3,49 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Owner console — CartMind</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
 <style>
-:root{--nav:#131921;--accent:#ff8a3d;--wash:#f6f7fb;--line:#e5e7eb;--ink:#1a1d29;--muted:#6b7280;--red:#e53e3e}
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+:root{--nav:#0f1029;--accent:#7c5cff;--accent-2:#00d9c0;--grad:linear-gradient(135deg,#7c5cff 0%,#00d9c0 100%);--line:#2a2b52;--ink:#eef0ff;--muted:#9497c4;--red:#ff6b8b}
 *{box-sizing:border-box}
-body{margin:0;font-family:Arial,sans-serif;background:var(--nav);min-height:100vh;display:flex;align-items:center;justify-content:center}
-.card{background:#fff;border-radius:14px;padding:36px 32px;width:340px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
-.brand{font-size:1.3rem;font-weight:800;color:var(--nav);margin-bottom:4px}
-.brand span{color:var(--accent)}
-h1{font-size:1.05rem;font-weight:700;color:var(--ink);margin:18px 0 4px}
-p.sub{color:var(--muted);font-size:.82rem;margin:0 0 20px}
-.error{background:#fdeaea;color:var(--red);padding:10px 12px;border-radius:8px;font-size:.82rem;margin-bottom:14px}
-label{display:block;font-size:.8rem;font-weight:700;color:var(--ink);margin-bottom:6px}
-input{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:8px;font-size:.95rem;margin-bottom:16px}
-input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
-button{width:100%;background:var(--accent);color:#fff;border:0;padding:12px;border-radius:8px;font-weight:700;font-size:.9rem;cursor:pointer}
-button:hover{background:#f3711f}
-a.back{display:block;text-align:center;margin-top:16px;font-size:.78rem;color:var(--muted);text-decoration:none}
+body{margin:0;font-family:"Inter",Arial,sans-serif;background:radial-gradient(circle at 20% 20%,#1a1c42 0%,#0b0c22 55%,#05050f 100%);min-height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;color:var(--ink)}
+.orb{position:absolute;width:420px;height:420px;border-radius:50%;background:var(--grad);filter:blur(90px);opacity:.35;animation:drift 10s ease-in-out infinite}
+.orb.a{top:-140px;left:-120px}
+.orb.b{bottom:-160px;right:-100px;animation-delay:2s}
+@keyframes drift{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(30px,-20px) scale(1.1)}}
+.card{position:relative;z-index:1;background:rgba(20,21,50,.7);backdrop-filter:blur(18px);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:38px 34px;width:360px;box-shadow:0 30px 70px rgba(0,0,0,.5)}
+.brand{font-size:1.4rem;font-weight:800;color:#fff;margin-bottom:4px;letter-spacing:-.02em}
+.brand span{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent}
+h1{font-size:1.1rem;font-weight:700;color:#fff;margin:20px 0 4px}
+p.sub{color:var(--muted);font-size:.85rem;margin:0 0 22px;line-height:1.5}
+.error{background:rgba(255,107,139,.12);border:1px solid rgba(255,107,139,.3);color:var(--red);padding:10px 12px;border-radius:10px;font-size:.82rem;margin-bottom:14px}
+label{display:block;font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em;font-size:.72rem}
+input{width:100%;padding:12px 14px;border:1px solid var(--line);border-radius:10px;font-size:.95rem;margin-bottom:18px;background:rgba(255,255,255,.05);color:#fff;transition:border-color .15s,box-shadow .15s}
+input::placeholder{color:#5c5f8a}
+input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,92,255,.25)}
+button{width:100%;background:var(--grad);color:#0f1029;border:0;padding:13px;border-radius:24px;font-weight:800;font-size:.92rem;cursor:pointer;transition:filter .2s,transform .15s;box-shadow:0 10px 28px rgba(85,60,220,.4)}
+button:hover{filter:brightness(1.08);transform:translateY(-1px)}
+button:active{transform:scale(.98)}
+a.back{display:block;text-align:center;margin-top:18px;font-size:.78rem;color:var(--muted);text-decoration:none;transition:color .15s}
+a.back:hover{color:var(--accent-2)}
+.badge-row{display:flex;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--line);font-size:.68rem;color:var(--muted);justify-content:center}
 </style>
 </head>
 <body>
+<div class="orb a"></div>
+<div class="orb b"></div>
 <div class="card">
   <div class="brand">Cart<span>Mind</span></div>
-  <h1>Merchant sign-in</h1>
-  <p class="sub">Authenticated payment and audit visibility.</p>
+  <h1>Merchant control room</h1>
+  <p class="sub">Live audit trail, safety-kernel decisions, and revenue — authenticated access only.</p>
   {% if error %}<div class="error">{{ error }}</div>{% endif %}
   <form method="post">
     <label>Owner password</label>
-    <input type="password" name="password" required autofocus>
-    <button type="submit">View owner console</button>
+    <input type="password" name="password" placeholder="••••••••" required autofocus>
+    <button type="submit">Enter console →</button>
   </form>
   <a class="back" href="/search">&larr; Back to storefront</a>
+  <div class="badge-row"><span>🔒 Session-scoped</span><span>✓ Audited</span></div>
 </div>
 </body>
 </html>

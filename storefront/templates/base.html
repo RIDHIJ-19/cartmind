@@ -88,12 +88,25 @@
     return html.replace(/\b(order_[A-Za-z0-9]+|pay_[A-Za-z0-9]+)\b/g, '<code class="id-chip">$1</code>');
   }
 
+  const THINKING_DOTS = '<span></span><span></span><span></span>';
+
   function renderLog() {
     log.innerHTML = state.log.map(m => {
+      if (m.thinking) return `<div class="agent-msg assistant thinking-dots">${THINKING_DOTS}</div>`;
       const body = m.role === 'assistant' ? renderMarkdown(m.text) : escapeHtml(m.text);
       return `<div class="agent-msg ${m.role}">${body}</div>`;
     }).join('');
     log.scrollTop = log.scrollHeight;
+  }
+
+  function bumpCartBadges() {
+    document.querySelectorAll('.cart-badge').forEach(b => {
+      b.classList.remove('bump');
+      requestAnimationFrame(() => {
+        b.classList.add('bump');
+        setTimeout(() => b.classList.remove('bump'), 260);
+      });
+    });
   }
 
   function showToast(text) {
@@ -183,7 +196,7 @@
     renderLog();
     saveState(state);
 
-    const thinking = { role: 'assistant', text: 'Thinking…' };
+    const thinking = { role: 'assistant', text: 'Thinking…', thinking: true };
     state.log.push(thinking);
     renderLog();
     // Must be persisted now, not just held in this page's own JS state — a
@@ -223,9 +236,11 @@
       });
       const d = await r.json();
       thinking.text = d.reply || (d.error || 'Sorry, something went wrong.');
+      thinking.thinking = false;
       if (d.history) state.history = d.history;
       if (typeof d.cart_count === 'number') {
         document.querySelectorAll('.cart-badge').forEach(b => b.textContent = d.cart_count);
+        bumpCartBadges();
       }
       renderLog();
       saveState(state);
@@ -237,6 +252,7 @@
       }
     } catch (err) {
       thinking.text = 'Could not reach the assistant.';
+      thinking.thinking = false;
       renderLog();
     }
   });
